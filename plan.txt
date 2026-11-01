@@ -1,0 +1,83 @@
+1. Подготовка
+Apple Developer Program оформляется несколько дней, поэтому это не должно блокировать разработку API.
+Нужно:
+Apple Developer Program;
+App ID by.solopizza.app с capability «Sign in with Apple»;
+Google Cloud project и OAuth consent screen;
+Web, Android и iOS client IDs;
+Android SHA-1 для debug и release;
+EAS-проект и credentials.
+Web client ID уже есть, но нужно проверить доступ к Google Cloud project. Android/iOS client IDs придётся создать.
+
+2. API-фундамент
+Добавить djangorestframework, drf-spectacular, djangorestframework-simplejwt, google-auth, PyJWT[crypto].
+Создать app_api.
+Настроить /api/v1/.
+Сгенерировать OpenAPI и Swagger.
+Добавить TIME_ZONE = "Europe/Minsk" и CURRENCY = "BYN".
+
+3. Read-only каталог
+GET /api/v1/meta/
+GET /api/v1/branches/
+GET /api/v1/categories/?branch_id=...
+GET /api/v1/products/?category=...&branch_id=...
+GET /api/v1/products/{slug}/?branch_id=...&variant_id=...
+Везде фильтровать is_alcoholic=False. Дополнительно проверять алкоголь при создании заказа, чтобы его нельзя было добавить вручную через API.
+
+4. Сервис расчёта
+Вынести из checkout view и CheckoutForm:
+quote_cart(items, branch, delivery_type, user=None) -> dict
+create_order(items, customer_data, branch, delivery_type, payment_method, user=None) -> Order
+Использовать этот сервис и в web-checkout, и в API. Это главная защита от расхождения цен между сайтом и приложением.
+
+5. Гостевой заказ
+POST /api/v1/cart/quote/
+POST /api/v1/orders/
+GET /api/v1/orders/{id}/ с X-Order-Token
+client_order_id для идемпотентности.
+order_token возвращать один раз, хранить в expo-secure-store.
+
+6. Авторизация
+POST /api/v1/auth/google/
+POST /api/v1/auth/apple/
+POST /api/v1/auth/refresh/
+POST /api/v1/auth/logout/
+GET /api/v1/me/
+PATCH /api/v1/me/
+DELETE /api/v1/me/
+Связывать Google/Apple с существующим SocialAccount и User. JWT — access 15 минут, refresh 30 дней, с ротацией и blacklist.
+
+7. Приложение
+Expo + TypeScript.
+Expo Router.
+TanStack Query.
+Zustand + AsyncStorage для корзины.
+React Hook Form + Zod.
+expo-secure-store.
+@react-native-google-signin/google-signin.
+expo-apple-authentication.
+openapi-typescript + openapi-fetch.
+
+
+Экраны:
+Выбор филиала.
+Каталог.
+Категория.
+Товар.
+Корзина.
+Checkout.
+Подтверждение.
+Статус заказа.
+Профиль / вход.
+История заказов.
+
+Что важно сохранить при переносе
+- Смена филиала очищает корзину. Сейчас это делает app_home/views.py::select_branch. В приложении корзина локальная, поэтому при смене филиала её нужно очищать
+- Цены считает только сервер. Корзина в приложении хранит состав, а не итоговую сумму.
+- Проверка времени — WorkingHours выбранного филиала + глобальный OrderAvailability.
+- Сотрудник в клиентском приложении должен видеть обычное меню, без admin-only категорий.
+
+Что Где должно жить
+Бизнес-логика: цены, скидки, доставка, доступность, время работы, видимость категорий Только на сервере, в Django
+Клиентские экраны: каталог, корзина, checkout, заказы, профиль В приложении
+Staff-функции: редактирование заказов, статистика, печать чеков, управление меню Остаются на сайте
