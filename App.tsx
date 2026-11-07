@@ -6,6 +6,7 @@ import { Provider, useDispatch } from 'react-redux';
 import { store } from './src/store/store';
 import AppNavigator from './src/navigation/AppNavigator';
 import { loadStoredTokens } from './src/store/slices/authSlice';
+import { loadCart } from './src/store/slices/cartSlice';
 
 /**
  * Восстанавливает сессию при холодном старте.
@@ -19,6 +20,9 @@ function Bootstrap() {
 
   useEffect(() => {
     dispatch(loadStoredTokens());
+    // Корзина локальная: при холодном старте восстанавливаем её из AsyncStorage,
+    // иначе она «пустеет» до первого добавления товара.
+    dispatch(loadCart());
   }, [dispatch]);
 
   return <AppNavigator />;

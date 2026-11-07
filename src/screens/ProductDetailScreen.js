@@ -4,12 +4,14 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Dimensions,
 } from 'react-native';
+import Alert from '../utils/alertShim';
+import ProductImage from '../components/ui/ProductImage';
+import useAppTheme from '../theme/useAppTheme';
+import { num } from '../utils/money';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProductById } from '../store/slices/productSlice';
 import { addToCart } from '../store/slices/cartSlice';
@@ -18,6 +20,8 @@ import { productService } from '../services';
 const { width } = Dimensions.get('window');
 
 const ProductDetailScreen = ({ route, navigation }) => {
+  const { colors } = useAppTheme();
+  const styles = makeStyles(colors);
   const { productId, product: routeProduct } = route.params;
   const dispatch = useDispatch();
   const { currentProduct, loading: reduxLoading } = useSelector(state => state.products);
@@ -117,9 +121,9 @@ const ProductDetailScreen = ({ route, navigation }) => {
   useEffect(() => {
     // Пересчитываем общую стоимость
     if (product && selectedSize) {
-      const basePrice = product.price || product.base_price || 0;
-      const sizePrice = selectedSize.price || 0;
-      const toppingsPrice = selectedToppings.reduce((sum, topping) => sum + topping.price, 0);
+      const basePrice = num(product.price ?? product.base_price);
+      const sizePrice = num(selectedSize?.price);
+      const toppingsPrice = selectedToppings.reduce((sum, topping) => sum + num(topping.price), 0);
       setTotalPrice((basePrice + sizePrice + toppingsPrice) * quantity);
     }
   }, [product, selectedSize, selectedToppings, quantity]);
@@ -155,7 +159,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
       productId: product.id,
       name: product.name,
       image: product.image || product.images?.[0]?.image,
-      price: totalPrice / quantity,
+      price: num(totalPrice) / quantity,
       quantity: quantity,
       size: selectedSize,
       toppings: selectedToppings,
@@ -264,7 +268,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#079b59" />
         <Text style={styles.loadingText}>Загрузка товара...</Text>
       </View>
     );
@@ -288,12 +292,10 @@ const ProductDetailScreen = ({ route, navigation }) => {
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Изображение товара */}
-        <Image
-          source={{
-            uri: product.image || product.images?.[0]?.image || 'https://via.placeholder.com/400x300/FF6B35/FFFFFF?text=' + product.name.charAt(0),
-          }}
+        <ProductImage
+          uri={product.image || product.images?.[0]?.image}
           style={styles.productImage}
-          resizeMode="cover"
+          emojiSize={72}
         />
 
         {/* Информация о товаре */}
@@ -303,7 +305,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
             {product.description}
           </Text>
           <Text style={styles.basePrice}>
-            Базовая цена: {product.price || product.base_price} BYN
+            Базовая цена: {num(product.price ?? product.base_price).toFixed(2)} BYN
           </Text>
         </View>
 
@@ -381,7 +383,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
       <View style={styles.bottomPanel}>
         <View style={styles.priceContainer}>
           <Text style={styles.totalPriceLabel}>Итого:</Text>
-          <Text style={styles.totalPrice}>{totalPrice.toFixed(2)} BYN</Text>
+          <Text style={styles.totalPrice}>{num(totalPrice).toFixed(2)} BYN</Text>
         </View>
         <TouchableOpacity
           style={styles.addToCartButton}
@@ -394,33 +396,33 @@ const ProductDetailScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.bg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666666',
+    color: colors.textMuted,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     paddingHorizontal: 20,
   },
   errorText: {
      marginTop: 16,
      fontSize: 18,
-     color: '#666666',
+     color: colors.textMuted,
      textAlign: 'center',
    },
   scrollView: {
@@ -432,36 +434,36 @@ const styles = StyleSheet.create({
   },
   productInfo: {
     padding: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     marginBottom: 8,
   },
   productName: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: colors.text,
     marginBottom: 12,
     lineHeight: 34,
   },
   productDescription: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.textMuted,
     lineHeight: 24,
     marginBottom: 16,
   },
   basePrice: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FF6B35',
+    color: colors.accent,
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     marginBottom: 8,
     padding: 24,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: colors.text,
     marginBottom: 20,
   },
   optionsContainer: {
@@ -470,24 +472,24 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   optionButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: colors.divider,
     minWidth: 90,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
   optionButtonActive: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
-    shadowColor: '#FF6B35',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -496,20 +498,20 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.text,
     textAlign: 'center',
   },
   optionTextActive: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
   },
   optionPrice: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textMuted,
     marginTop: 4,
     fontWeight: '500',
   },
   optionPriceActive: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
   },
   addonsContainer: {
     gap: 12,
@@ -519,19 +521,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: colors.cardBg,
+    borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderColor: colors.divider,
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
   addonItemActive: {
-    backgroundColor: '#FEF3F2',
-    borderColor: '#FF6B35',
+    backgroundColor: colors.errorRgba,
+    borderColor: colors.accent,
   },
   addonInfo: {
     flex: 1,
@@ -539,36 +541,36 @@ const styles = StyleSheet.create({
   addonName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.text,
   },
   addonNameActive: {
-    color: '#FF6B35',
+    color: colors.accent,
   },
   addonPrice: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textMuted,
     marginTop: 4,
     fontWeight: '500',
   },
   addonPriceActive: {
-    color: '#FF6B35',
+    color: colors.accent,
   },
   checkbox: {
     width: 24,
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.divider,
+    backgroundColor: colors.cardBg,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxActive: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   checkmark: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -581,25 +583,25 @@ const styles = StyleSheet.create({
   quantityButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FF6B35',
+    borderRadius: 20,
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#FF6B35',
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 2,
   },
   quantityButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 20,
     fontWeight: 'bold',
   },
   quantityText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: colors.text,
     minWidth: 40,
     textAlign: 'center',
   },
@@ -614,20 +616,20 @@ const styles = StyleSheet.create({
   },
   nutritionLabel: {
     fontSize: 16,
-    color: '#374151',
+    color: colors.text,
     fontWeight: '500',
   },
   nutritionValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.textMuted,
   },
   bottomPanel: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     padding: 24,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderTopColor: colors.divider,
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -641,27 +643,27 @@ const styles = StyleSheet.create({
   },
   totalPriceLabel: {
     fontSize: 18,
-    color: '#374151',
+    color: colors.text,
     fontWeight: '500',
   },
   totalPrice: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FF6B35',
+    color: colors.accent,
   },
   addToCartButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingVertical: 18,
-    borderRadius: 16,
+    borderRadius: 20,
     alignItems: 'center',
-    shadowColor: '#FF6B35',
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   addToCartButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 18,
     fontWeight: '700',
   },

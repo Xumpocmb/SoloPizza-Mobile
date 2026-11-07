@@ -6,16 +6,20 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   FlatList,
   RefreshControl,
   Linking,
 } from 'react-native';
+import Alert from '../utils/alertShim';
+import useAppTheme from '../theme/useAppTheme';
+import { num } from '../utils/money';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchOrderDetail, cancelOrder } from '../store/slices/orderSlice';
 import { orderService } from '../services';
 
 const OrderDetailScreen = ({ route, navigation }) => {
+  const { colors } = useAppTheme();
+  const styles = makeStyles(colors);
   const { orderId, order: routeOrder } = route.params;
   const dispatch = useDispatch();
   const { currentOrder, isLoading, error } = useSelector((state) => state.order);
@@ -118,19 +122,19 @@ const OrderDetailScreen = ({ route, navigation }) => {
       case 'pending':
         return '#F39C12';
       case 'confirmed':
-        return '#3498DB';
+        return colors.accent;
       case 'preparing':
         return '#9B59B6';
       case 'ready':
-        return '#2ECC71';
+        return colors.success;
       case 'delivering':
-        return '#1ABC9C';
+        return colors.accent;
       case 'delivered':
-        return '#27AE60';
+        return colors.success;
       case 'cancelled':
-        return '#E74C3C';
+        return colors.error;
       default:
-        return '#95A5A6';
+        return colors.textMuted;
     }
   };
 
@@ -187,7 +191,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
       <View style={styles.itemPricing}>
         <Text style={styles.itemQuantity}>{item.quantity} шт.</Text>
         <Text style={styles.itemTotal}>
-          {(item.price * item.quantity).toFixed(2)} BYN
+          {(num(item.price) * item.quantity).toFixed(2)} BYN
         </Text>
       </View>
     </View>
@@ -196,7 +200,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#079b59" />
         <Text style={styles.loadingText}>Загрузка заказа...</Text>
       </View>
     );
@@ -227,7 +231,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          colors={['#FF6B35']}
+          colors={[colors.accent]}
         />
       }
     >
@@ -342,7 +346,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Сумма заказа:</Text>
           <Text style={styles.summaryValue}>
-            {(currentOrder.total_amount - (currentOrder.delivery_type === 'delivery' ? 5 : 0)).toFixed(2)} BYN
+            {num(currentOrder.total_amount).toFixed(2)} BYN
           </Text>
         </View>
         {currentOrder.delivery_type === 'delivery' && (
@@ -394,13 +398,13 @@ const OrderDetailScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.bg,
   },
   header: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingTop: 50,
     paddingBottom: 20,
     paddingHorizontal: 20,
@@ -412,20 +416,20 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   backButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: '500',
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: colors.buttonText,
   },
   placeholder: {
     width: 60,
   },
   statusSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     padding: 20,
     alignItems: 'center',
     marginTop: 10,
@@ -437,24 +441,24 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   statusText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: 'bold',
   },
   orderDate: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginBottom: 4,
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     marginTop: 10,
     padding: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 15,
   },
   infoRow: {
@@ -465,13 +469,13 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 16,
-    color: '#2C3E50',
+    color: colors.text,
     flex: 1,
   },
   infoValue: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#2C3E50',
+    color: colors.text,
     flex: 1,
     textAlign: 'right',
   },
@@ -480,13 +484,13 @@ const styles = StyleSheet.create({
   },
   addressText: {
     fontSize: 16,
-    color: '#2C3E50',
+    color: colors.text,
     marginTop: 5,
     lineHeight: 22,
   },
   addressComment: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginTop: 5,
     fontStyle: 'italic',
   },
@@ -496,7 +500,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.hoverBg,
   },
   itemInfo: {
     flex: 1,
@@ -505,17 +509,17 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 4,
   },
   itemOption: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginBottom: 2,
   },
   itemPrice: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginTop: 4,
   },
   itemPricing: {
@@ -523,21 +527,21 @@ const styles = StyleSheet.create({
   },
   itemQuantity: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginBottom: 4,
   },
   itemTotal: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: colors.accent,
   },
   commentText: {
     fontSize: 16,
-    color: '#2C3E50',
+    color: colors.text,
     lineHeight: 22,
   },
   summarySection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     marginTop: 10,
     padding: 20,
   },
@@ -549,41 +553,41 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 16,
-    color: '#2C3E50',
+    color: colors.text,
   },
   summaryValue: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#2C3E50',
+    color: colors.text,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: '#E1E8ED',
+    backgroundColor: colors.divider,
     marginVertical: 10,
   },
   totalLabel: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.text,
   },
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: colors.accent,
   },
   actionsSection: {
     padding: 20,
     paddingBottom: 40,
   },
   cancelButton: {
-    backgroundColor: '#E74C3C',
+    backgroundColor: colors.error,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 20,
     alignItems: 'center',
     marginBottom: 12,
   },
   cancelButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -591,13 +595,13 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   reorderButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 20,
     alignItems: 'center',
   },
   reorderButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -605,52 +609,52 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.bg,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.bg,
   },
   errorTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#E74C3C',
+    color: colors.error,
     marginBottom: 8,
   },
   errorText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: '600',
   },
   supportButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: colors.accent,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 20,
     alignItems: 'center',
     marginTop: 12,
   },
   supportButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: 'bold',
   },

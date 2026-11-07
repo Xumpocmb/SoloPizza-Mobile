@@ -5,17 +5,19 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Image,
-  Alert,
   RefreshControl,
   ActivityIndicator,
   TextInput,
+  Platform,
 } from 'react-native';
+import Alert from '../utils/alertShim';
+import useAppTheme from '../theme/useAppTheme';
+import { num } from '../utils/money';
+import ProductImage from '../components/ui/ProductImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // ИСПРАВЛЕНО ПРИ АУДИТЕ: прямой импорт react-native-vector-icons в v10.x
 // не тянет шрифт — иконки рендерились пустыми квадратами.
 import Icon from '../components/ui/Icon';
-import { cartService } from '../services';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   updateCartItemQuantity,
@@ -24,6 +26,8 @@ import {
 } from '../store/slices/cartSlice';
 
 const CartScreen = ({ navigation }) => {
+  const { colors } = useAppTheme();
+  const styles = makeStyles(colors);
   const dispatch = useDispatch();
   const { items } = useSelector((state) => state.cart);
   const { user } = useSelector((state) => state.auth);
@@ -32,7 +36,7 @@ const CartScreen = ({ navigation }) => {
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [cartItems, setCartItems] = useState([]);
+  const cartItems = items; // единственный источник — redux cartSlice (persist в AsyncStorage)
   const [cartSummary, setCartSummary] = useState({ total: 0, discount: 0, delivery: 0 });
   const [updating, setUpdating] = useState(false);
 
@@ -41,24 +45,9 @@ const CartScreen = ({ navigation }) => {
   }, []);
 
   const loadCart = async () => {
-    try {
-      setLoading(true);
-      const [cartData, summaryData] = await Promise.all([
-        cartService.getCart(),
-        cartService.getCartSummary(),
-      ]);
-      
-      setCartItems(cartData.items || []);
-      setCartSummary(summaryData || { total: 0, discount: 0, delivery: 0 });
-    } catch (error) {
-      console.error('Error loading cart:', error);
-      // Fallback to local cart
-      const localCart = await cartService.getLocalCart();
-      setCartItems(localCart.items || []);
-      setCartSummary({ total: localCart.total || 0, discount: 0, delivery: 0 });
-    } finally {
-      setLoading(false);
-    }
+    // Корзина локальная (redux + AsyncStorage): в app_api друга эндпоинтов
+    // корзины нет, серверные вызовы давали 404 и красные тосты LogBox.
+    setLoading(false);
   };
 
   const calculateTotal = () => {
@@ -66,9 +55,11 @@ const CartScreen = ({ navigation }) => {
       return cartSummary;
     }
     
-    const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const discount = promoApplied ? subtotal * 0.1 : 0;
-    const delivery = subtotal > 500 ? 0 : 150;
+    const subtotal = cartItems.reduce((sum, item) => sum + (num(item.price) * item.quantity), 0);
+    // Скидки и доставку считает сервер друга (quote_cart из plan.txt), когда
+    // появятся эндпоинты заказов. Плейсхолдеры 150/10% убраны как выдуманные.
+    const discount = 0;
+    const delivery = 0;
     const total = subtotal - discount + delivery;
     
     return {
@@ -80,7 +71,7 @@ const CartScreen = ({ navigation }) => {
   };
 
   // Вычисляем общую сумму и количество товаров
-  const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalAmount = items.reduce((sum, item) => sum + (num(item.price) * item.quantity), 0);
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const updateQuantity = async (itemId, newQuantity) => {
@@ -91,16 +82,9 @@ const CartScreen = ({ navigation }) => {
     
     try {
       setUpdating(true);
-      await cartService.updateCartItem(itemId, { quantity: newQuantity });
-      await loadCart(); // Reload cart to get updated data
+      await dispatch(updateCartItemQuantity({ itemId, quantity: newQuantity })).unwrap();
     } catch (error) {
-      console.error('Error updating quantity:', error);
-      // Update locally as fallback
-      setCartItems(prevItems => 
-        prevItems.map(item => 
-          item.id === itemId ? { ...item, quantity: newQuantity } : item
-        )
-      );
+      // обновление количества — локальная операция, сюрпризов не ждём
     } finally {
       setUpdating(false);
     }
@@ -126,12 +110,9 @@ const CartScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               setUpdating(true);
-              await cartService.removeFromCart(itemId);
-              await loadCart();
+              await dispatch(removeFromCart(itemId)).unwrap();
             } catch (error) {
-              console.error('Error removing item:', error);
-              // Remove locally as fallback
-              setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
+              // удаление локальное, сюрпризов не ждём
             } finally {
               setUpdating(false);
             }
@@ -216,13 +197,9 @@ const CartScreen = ({ navigation }) => {
     
     try {
       setUpdating(true);
-      await cartService.applyPromoCode(promoCode.trim());
-      setPromoApplied(true);
-      await loadCart(); // Reload to get updated totals
-      Alert.alert('Успех', 'Промокод применен!');
-    } catch (error) {
-      console.error('Error applying promo code:', error);
-      Alert.alert('Ошибка', 'Неверный промокод или промокод уже использован');
+      // Сервера промокодов в app_api пока нет: честно говорим об этом,
+      // вместо 404 и красного тоста. Подключим вместе с эндпоинтами заказов.
+      Alert.alert('Промокод', 'Сервер промокодов ещё не подключён. Скидки появятся вместе с оформлением заказа.');
     } finally {
       setUpdating(false);
     }
@@ -231,13 +208,9 @@ const CartScreen = ({ navigation }) => {
   const removePromoCode = async () => {
     try {
       setUpdating(true);
-      await cartService.removePromoCode();
       setPromoApplied(false);
       setPromoCode('');
-      await loadCart();
     } catch (error) {
-      console.error('Error removing promo code:', error);
-      // Remove locally as fallback
       setPromoApplied(false);
       setPromoCode('');
     } finally {
@@ -254,16 +227,14 @@ const CartScreen = ({ navigation }) => {
   };
 
   const renderCartItem = ({ item }) => {
-    const itemTotal = (item.price * item.quantity).toFixed(2);
+    const itemTotal = (num(item.price) * item.quantity).toFixed(2);
 
     return (
       <View style={styles.cartItem}>
-        <Image
-          source={{
-            uri: item.image || item.product?.main_image || 'https://via.placeholder.com/80x80/FF6B35/FFFFFF?text=' + (item.name?.charAt(0) || 'P'),
-          }}
+        <ProductImage
+          uri={item.image || item.product?.main_image}
           style={styles.itemImage}
-          resizeMode="cover"
+          emojiSize={28}
         />
         
         <View style={styles.itemInfo}>
@@ -286,7 +257,7 @@ const CartScreen = ({ navigation }) => {
           )}
           
           <View style={styles.itemFooter}>
-            <Text style={styles.itemPrice}>{(item.price || item.total_price).toFixed(2)} BYN за шт.</Text>
+            <Text style={styles.itemPrice}>{num(item.price ?? item.total_price).toFixed(2)} BYN за шт.</Text>
             <Text style={styles.itemTotal}>Итого: {itemTotal} BYN</Text>
           </View>
         </View>
@@ -326,14 +297,14 @@ const CartScreen = ({ navigation }) => {
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyIcon}>🛒</Text>
       <Text style={styles.emptyTitle}>Корзина пуста</Text>
-      <Text style={styles.emptyText}>
+      <Text style={styles.emptySubtitle}>
         Добавьте товары из каталога, чтобы оформить заказ
       </Text>
       <TouchableOpacity
-        style={styles.shopButton}
+        style={styles.continueButton}
         onPress={() => navigation.navigate('Catalog')}
       >
-        <Text style={styles.shopButtonText}>Перейти к покупкам</Text>
+        <Text style={styles.continueButtonText}>Перейти к покупкам</Text>
       </TouchableOpacity>
     </View>
   );
@@ -346,7 +317,7 @@ const CartScreen = ({ navigation }) => {
       </View>
       <View style={styles.summaryRow}>
         <Text style={styles.summaryLabel}>Сумма:</Text>
-        <Text style={styles.summaryValue}>{totalAmount.toFixed(2)} BYN</Text>
+        <Text style={styles.summaryValue}>{num(totalAmount).toFixed(2)} BYN</Text>
       </View>
       <View style={styles.summaryDivider} />
       <View style={styles.summaryRow}>
@@ -385,7 +356,7 @@ const CartScreen = ({ navigation }) => {
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={handleRefresh}
-                colors={['#FF6B35']}
+                colors={[colors.accent]}
               />
             }
             ListFooterComponent={renderCartSummary}
@@ -414,40 +385,45 @@ const CartScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.bg,
   },
   header: {
-    backgroundColor: '#FF6B35',
-    paddingTop: 50,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    backgroundColor: colors.accent,
+    paddingTop: Platform.OS === 'web' ? 12 : 50,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    shadowColor: '#000',
+    justifyContent: 'center',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
   },
   title: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.buttonText,
+    textAlign: 'center',
   },
   clearButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    position: 'absolute',
+    right: 16,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    bordercolor: colors.buttonText,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   clearButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -455,13 +431,13 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   cartItem: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     marginHorizontal: 20,
     marginTop: 16,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     flexDirection: 'row',
-    shadowColor: '#000',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -470,7 +446,7 @@ const styles = StyleSheet.create({
   itemImage: {
     width: 90,
     height: 90,
-    borderRadius: 12,
+    borderRadius: 20,
   },
   itemInfo: {
     flex: 1,
@@ -480,13 +456,13 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: colors.text,
     marginBottom: 8,
     lineHeight: 22,
   },
   itemOption: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textMuted,
     marginBottom: 4,
     fontWeight: '500',
   },
@@ -495,13 +471,13 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textMuted,
     fontWeight: '500',
   },
   itemTotal: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FF6B35',
+    color: colors.accent,
     marginTop: 4,
   },
   quantityControls: {
@@ -512,25 +488,25 @@ const styles = StyleSheet.create({
   quantityButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FF6B35',
+    borderRadius: 20,
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#FF6B35',
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 2,
   },
   quantityButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 18,
     fontWeight: '700',
   },
   quantityText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: colors.text,
     marginVertical: 10,
     minWidth: 30,
     textAlign: 'center',
@@ -538,28 +514,34 @@ const styles = StyleSheet.create({
   removeButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: '#EF4444',
+    borderRadius: 20,
+    backgroundColor: colors.error,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#EF4444',
+    shadowColor: colors.error,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 2,
   },
   removeButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 20,
     fontWeight: '700',
   },
+  quantityButtonDisabled: {
+    opacity: 0.5,
+  },
+  removeButtonDisabled: {
+    opacity: 0.5,
+  },
   summaryContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     margin: 20,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -573,28 +555,28 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.textMuted,
     fontWeight: '500',
   },
   summaryValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: colors.text,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.divider,
     marginVertical: 12,
   },
   totalLabel: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: colors.text,
   },
   totalValue: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FF6B35',
+    color: colors.accent,
   },
   emptyContainer: {
     flex: 1,
@@ -604,48 +586,48 @@ const styles = StyleSheet.create({
   },
   emptyIcon: {
     fontSize: 100,
-    color: '#D1D5DB',
+    color: colors.divider,
     marginBottom: 24,
   },
   emptyTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: colors.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
     fontWeight: '500',
   },
   continueButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingHorizontal: 32,
     paddingVertical: 16,
-    borderRadius: 16,
-    shadowColor: '#FF6B35',
+    borderRadius: 20,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   continueButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   bottomPanel: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     paddingHorizontal: 24,
     paddingVertical: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderTopColor: colors.divider,
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -659,26 +641,26 @@ const styles = StyleSheet.create({
   },
   bottomTotalLabel: {
     fontSize: 18,
-    color: '#2C3E50',
+    color: colors.text,
   },
   bottomTotalValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: colors.accent,
   },
   checkoutButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingVertical: 18,
-    borderRadius: 16,
+    borderRadius: 20,
     alignItems: 'center',
-    shadowColor: '#FF6B35',
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   checkoutButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 0.5,

@@ -78,6 +78,36 @@ const productService = {
   async searchProducts(query, params = {}) {
     return catalogService.searchProducts(query, params);
   },
+
+  /** Метаданные API: валюта, таймзона, филиал по умолчанию (app_api /meta/). */
+  async getMeta() {
+    return catalogService.getMeta();
+  },
+
+  /** Список филиалов (app_api /branches/). */
+  async getBranches() {
+    return catalogService.getBranches();
+  },
+
+  /** Категория вместе с товарами (app_api /categories/<slug>/). */
+  async getCategoryDetail(slug) {
+    return catalogService.getCategoryDetail(slug);
+  },
+
+  /** Борты пиццы товара (вложены в варианты карточки). */
+  async getProductBoards(productId) {
+    return catalogService.getPizzaBoards(productId);
+  },
+
+  /** Соусы основы товара (вложены в карточку). */
+  async getProductSauces(productId) {
+    return catalogService.getPizzaSauces(productId);
+  },
+
+  /** Напитки комбо (вложены в карточку). */
+  async getComboDrinks(productId) {
+    return catalogService.getComboDrinks(productId);
+  },
 };
 
 export default productService;

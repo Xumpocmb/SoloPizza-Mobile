@@ -7,6 +7,7 @@ import orderService from './orderService';
 import productService from './productService'; // ← ДОБАВЛЕН
 import promoService from './promoService';     // ← ДОБАВЛЕН
 import userService from './userService';       // ← ДОБАВЛЕН
+import vacancyService from './vacancyService'; // ← v1.1: вакансии и отклики
 
 export {
   apiService,
@@ -17,6 +18,7 @@ export {
   productService,
   promoService,
   userService,
+  vacancyService,
 };
 
 export default {
@@ -28,4 +30,5 @@ export default {
   product: productService,
   promo: promoService,
   user: userService,
+  vacancy: vacancyService,
 };

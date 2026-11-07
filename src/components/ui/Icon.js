@@ -75,7 +75,7 @@ const FALLBACK_GLYPHS = {
   'keyboard-arrow-right': '›',
 };
 
-export default function Icon({ name, size = 24, color = '#000', style, ...rest }) {
+export default function Icon({ name, size = 24, color = '#333333', style, ...rest }) {
   if (MaterialIcons) {
     return <MaterialIcons name={name} size={size} color={color} style={style} {...rest} />;
   }

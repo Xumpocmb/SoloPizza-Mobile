@@ -56,12 +56,13 @@ export const fetchCategories = createAsyncThunk(
 export const fetchProducts = createAsyncThunk(
   'products/fetchProducts',
   async (params = {}, { rejectWithValue }) => {
-    const { categoryId, search, page = 1 } = params || {};
+    const { categoryId, search, page = 1, force } = params || {};
     try {
       const payload = await catalogService.getProducts({
         category: categoryId,
         search,
         page,
+        force,
       });
 
       const products = toArray(payload);
@@ -83,9 +84,9 @@ export const fetchProducts = createAsyncThunk(
 /** Товары для главного экрана. */
 export const fetchFeaturedProducts = createAsyncThunk(
   'products/fetchFeaturedProducts',
-  async ({ limit = 6 } = {}, { rejectWithValue }) => {
+  async ({ limit = 6, force } = {}, { rejectWithValue }) => {
     try {
-      const payload = await catalogService.getPopularProducts({ limit });
+      const payload = await catalogService.getPopularProducts({ limit, force });
       return toArray(payload);
     } catch (error) {
       return rejectWithValue(error?.message || 'Не удалось загрузить рекомендуемые товары');
@@ -121,11 +122,41 @@ export const fetchProductById = createAsyncThunk(
 // Slice
 // ─────────────────────────────────────────────────────────────
 
+/** Филиалы: контракт app_api требует branch_id в каждом запросе каталога. */
+export const fetchBranches = createAsyncThunk(
+  'products/fetchBranches',
+  async (arg, { rejectWithValue }) => {
+    const force = arg === true || (arg && arg.force === true);
+    try {
+      await catalogService.ensureBranchId({ force });
+      return toArray(await catalogService.getBranches({ force }));
+    } catch (error) {
+      return rejectWithValue(error?.message || 'Не удалось загрузить филиалы');
+    }
+  },
+);
+
+/** Смена филиала: сбрасывает кэш товаров сервиса и список товаров в стейте. */
+export const selectBranch = createAsyncThunk(
+  'products/selectBranch',
+  async (branchId, { rejectWithValue }) => {
+    if (branchId === undefined || branchId === null) {
+      return rejectWithValue('Не указан идентификатор филиала');
+    }
+    catalogService.setBranchId(branchId);
+    return branchId;
+  },
+);
+
 const initialState = {
   products: [],
   featuredProducts: [],
   categories: [],
   currentProduct: null,
+  branches: [],
+  branchId: null,
+  // true, когда каталог работает на демо-данных (API ещё не задеплоен)
+  isDemo: false,
   currentPage: 1,
   totalPages: 1,
   hasNext: false,
@@ -167,6 +198,7 @@ const productSlice = createSlice({
       .addCase(fetchCategories.fulfilled, (state, action) => {
         state.loading = false;
         state.categories = action.payload;
+        state.isDemo = catalogService.isDemoActive();
       })
       .addCase(fetchCategories.rejected, (state, action) => {
         state.loading = false;
@@ -185,6 +217,7 @@ const productSlice = createSlice({
         state.totalPages = action.payload.totalPages;
         state.hasNext = action.payload.hasNext;
         state.hasPrevious = action.payload.hasPrevious;
+        state.isDemo = catalogService.isDemoActive();
       })
       .addCase(fetchProducts.rejected, (state, action) => {
         state.loading = false;
@@ -220,6 +253,22 @@ const productSlice = createSlice({
         state.loadingProduct = false;
         state.currentProduct = null;
         state.error = action.payload;
+      })
+
+      // Филиалы
+      .addCase(fetchBranches.fulfilled, (state, action) => {
+        state.branches = action.payload;
+        state.branchId = catalogService.getBranchId();
+        state.isDemo = catalogService.isDemoActive();
+      })
+      .addCase(fetchBranches.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+      .addCase(selectBranch.fulfilled, (state, action) => {
+        state.branchId = action.payload;
+        state.products = [];
+        state.currentProduct = null;
+        state.isDemo = catalogService.isDemoActive();
       });
   },
 });

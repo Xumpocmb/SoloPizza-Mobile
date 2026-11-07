@@ -18,7 +18,7 @@
  */
 
 import apiService from './apiService';
-import { API_ENDPOINTS } from '../config/api';
+import { API_ENDPOINTS, USER_API_ENABLED } from '../config/api';
 
 function toArray(payload) {
   if (Array.isArray(payload)) return payload;
@@ -50,8 +50,14 @@ class UserService {
    * @returns {Promise<Array>}
    */
   async getAddresses() {
+    // 02.11.2026: эндпоинта адресов на бэкенде нет, гостю адреса не нужны —
+    // не делаем запрос вовсе, пока нет токена входа или флага USER_API_ENABLED
+    const token = await apiService.getAuthToken();
+    if (!USER_API_ENABLED || !token) {
+      return [];
+    }
     try {
-      return toArray(await apiService.get(API_ENDPOINTS.USER.ADDRESSES));
+      return toArray(await apiService.get(API_ENDPOINTS.USER.ADDRESSES, {}, { silent: true }));
     } catch (error) {
       if (__DEV__) {
         console.warn('[userService] getAddresses недоступен:', error?.message || error);
@@ -79,8 +85,16 @@ class UserService {
    * @returns {Promise<Object>}
    */
   async getStats() {
+    // 02.11.2026, дефект №14: /user/stats/ на бэкенде нет, запрос уходил в 404
+    // и красным console.error на каждом открытии Профиля. Не делаем запрос,
+    // пока эндпоинт не задеплоен (USER_API_ENABLED=false) или пользователь
+    // не вошёл: статистика гостя бессмысленна. Экран получает нули.
+    const token = await apiService.getAuthToken();
+    if (!USER_API_ENABLED || !token) {
+      return { orders_count: 0, total_spent: 0, bonus_points: 0 };
+    }
     try {
-      const data = await apiService.get(API_ENDPOINTS.USER.STATS);
+      const data = await apiService.get(API_ENDPOINTS.USER.STATS, {}, { silent: true });
       return {
         orders_count: data?.orders_count ?? 0,
         total_spent: data?.total_spent ?? 0,

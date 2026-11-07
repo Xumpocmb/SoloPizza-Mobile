@@ -100,22 +100,38 @@ class ApiService {
   // Make HTTP request with timeout and error handling
   async makeRequest(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
-    
+    const timeoutMs = options.timeout ?? this.timeout;
+
     const requestOptions = {
       ...options,
       headers: await this.buildHeaders(options.headers),
     };
 
-    // Create timeout promise
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Request timeout')), this.timeout);
-    });
+    // 02.11.2026, дефект №1 из памяти агента: таймер таймаута ОБЯЗАН очищаться
+    // после исхода race. Раньше он жил вечно: после успешного ответа setTimeout
+    // всё равно срабатывал и реджектил промис без обработчика → unhandled
+    // rejection (жёлтый/красный бокс LogBox в debug-сборке). Теперь у запроса
+    // один AbortController: по таймауту fetch отменяется по-настоящему,
+    // а clearTimeout вызывается в finally независимо от исхода.
+    const send = (opts) => {
+      const controller = new AbortController();
+      let timer = null;
+      const timeoutPromise = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          // сначала отчёт о таймауте (race settles им), ПОТОМ отмена сокета:
+          // иначе abort-редект fetch успевал первым и маска ошибки терялась
+          reject(new Error('Request timeout'));
+          controller.abort();
+        }, timeoutMs);
+      });
+      return Promise.race([
+        fetch(url, { ...opts, signal: controller.signal }),
+        timeoutPromise,
+      ]).finally(() => clearTimeout(timer));
+    };
 
     try {
-      const response = await Promise.race([
-        fetch(url, requestOptions),
-        timeoutPromise
-      ]);
+      const response = await send(requestOptions);
 
       // Handle 401 Unauthorized - try to refresh token
       if (response.status === 401 && endpoint !== '/auth/token/refresh/') {
@@ -123,10 +139,7 @@ class ApiService {
           await this.refreshAccessToken();
           // Retry the original request with new token
           const newHeaders = await this.buildHeaders(options.headers);
-          const retryResponse = await fetch(url, {
-            ...requestOptions,
-            headers: newHeaders,
-          });
+          const retryResponse = await send({ ...requestOptions, headers: newHeaders });
           return await this.handleResponse(retryResponse);
         } catch (refreshError) {
           throw new Error('Authentication failed');
@@ -135,7 +148,11 @@ class ApiService {
 
       return await this.handleResponse(response);
     } catch (error) {
-      console.error('API Request failed:', error);
+      // silent: ожидаемые сбои (демо-режим) не spam'ят console.error,
+      // иначе LogBox в debug-сборке показывает красные тосты на каждый запрос
+      if (!options.silent) {
+        console.error('API Request failed:', error);
+      }
       throw this.handleError(error);
     }
   }
@@ -190,13 +207,14 @@ class ApiService {
   }
 
   // Convenience methods
-  async get(endpoint, params = {}) {
+  async get(endpoint, params = {}, reqOptions = {}) {
     const queryString = Object.keys(params).length 
       ? '?' + new URLSearchParams(params).toString()
       : '';
     
     return this.makeRequest(`${endpoint}${queryString}`, {
       method: 'GET',
+      ...reqOptions,
     });
   }
 

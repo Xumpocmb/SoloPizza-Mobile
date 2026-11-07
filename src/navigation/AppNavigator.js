@@ -1,9 +1,24 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSelector } from 'react-redux';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, useColorScheme, Platform } from 'react-native';
+import { light, dark } from '../theme/colors';
+
+// Тема навигации = палитра сайта (src/theme/colors.js): заголовки, таб-бар, фон.
+// Следует системной теме телефона, как класс .dark на сайте.
+const makeNavTheme = (palette) => ({
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: palette.accent,
+    background: palette.bg,
+    card: palette.headerBg,
+    text: palette.text,
+    border: palette.divider,
+  },
+});
 
 // Импорт экранов
 import HomeScreen from '../screens/HomeScreen';
@@ -16,6 +31,9 @@ import RegisterScreen from '../screens/RegisterScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import OrderHistoryScreen from '../screens/OrderHistoryScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
+import VacancyListScreen from '../screens/VacancyListScreen';
+import VacancyDetailScreen from '../screens/VacancyDetailScreen';
+import VacancyApplyScreen from '../screens/VacancyApplyScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -38,15 +56,17 @@ function CartIcon({ color, size }) {
 }
 
 function TabNavigator() {
+  const scheme = useColorScheme();
+  const palette = scheme === 'dark' ? dark : light;
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#FF6B35',
-        tabBarInactiveTintColor: '#666',
+        tabBarActiveTintColor: palette.accent,
+        tabBarInactiveTintColor: palette.textMuted,
         tabBarStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: palette.headerBg,
           borderTopWidth: 1,
-          borderTopColor: '#eee',
+          borderTopColor: palette.divider,
           height: 60,
           paddingBottom: 5,
         },
@@ -99,12 +119,16 @@ function TabNavigator() {
 
 // Главный навигатор приложения
 export default function AppNavigator() {
+  const scheme = useColorScheme();
+  const navTheme = makeNavTheme(scheme === 'dark' ? dark : light);
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       <Stack.Navigator
         screenOptions={{
+          headerTitleAlign: 'center',
           headerStyle: {
-            backgroundColor: '#FF6B35',
+            backgroundColor: '#079b59',
+            ...(Platform.OS === 'web' ? { height: 56 } : {}),
           },
           headerTintColor: '#FFFFFF',
           headerTitleStyle: {
@@ -147,6 +171,21 @@ export default function AppNavigator() {
           component={OrderDetailScreen} 
           options={{ title: 'Детали заказа' }}
         />
+        <Stack.Screen 
+          name="Vacancies" 
+          component={VacancyListScreen} 
+          options={{ title: 'Вакансии' }}
+        />
+        <Stack.Screen 
+          name="VacancyDetail" 
+          component={VacancyDetailScreen} 
+          options={{ title: 'Вакансия' }}
+        />
+        <Stack.Screen 
+          name="VacancyApply" 
+          component={VacancyApplyScreen} 
+          options={{ title: 'Отклик на вакансию' }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -160,7 +199,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: -6,
     top: -3,
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#079b59',
     borderRadius: 6,
     width: 12,
     height: 12,

@@ -1,0 +1,70 @@
+name: build-ios-debug
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 'latest'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Remove .xcode.env.local
+        run: rm -f ios/.xcode.env.local
+
+      - name: Patch Yoga.cpp
+        run: |
+          find node_modules -name "Yoga.cpp" -exec sed -i '' 's/ | / || /g' {} +
+
+      - name: Install Pods
+        run: |
+          cd ios
+          pod install --repo-update
+
+      # ИСПРАВЛЕННЫЙ ШАГ: Ищем только реальные файлы в папке fmt, обходя ярлыки
+      - name: Patch fmt (remove consteval)
+        run: |
+          echo "Патчинг исходников fmt..."
+          find ios/Pods/fmt -type f \( -name "*.h" -o -name "*.cc" \) -exec sed -i '' 's/consteval//g' {} +
+          echo "Патч fmt завершен!"
+
+      - name: Build iOS (Unsigned)
+        run: |
+          cd ios
+          set -o pipefail
+          xcodebuild -workspace *.xcworkspace -scheme SoloPizzaMobileApp -configuration Debug -sdk iphoneos -arch arm64 -derivedDataPath ./build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_ENTITLEMENTS="" build > build.log 2>&1 || (cat build.log && exit 1)
+
+      - name: Upload Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: ios/build.log
+
+      - name: Package into IPA
+        run: |
+          mkdir -p Payload
+          cp -r ios/build/Build/Products/Debug-iphoneos/*.app Payload/
+          zip -r SoloPizza.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SoloPizza-iOS-debug-IPA
+          path: SoloPizza.ipa

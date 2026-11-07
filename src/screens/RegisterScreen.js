@@ -6,16 +6,19 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
+import Alert from '../utils/alertShim';
+import useAppTheme from '../theme/useAppTheme';
 import { useDispatch, useSelector } from 'react-redux';
 import { registerUser, clearError } from '../store/slices/authSlice';
 import { authService } from '../services';
 
 const RegisterScreen = ({ navigation }) => {
+  const { colors } = useAppTheme();
+  const styles = makeStyles(colors);
   const dispatch = useDispatch();
   const { isLoading, error, isAuthenticated } = useSelector((state) => state.auth);
 
@@ -212,6 +215,7 @@ const RegisterScreen = ({ navigation }) => {
                 errors.firstName && styles.inputError,
               ]}
               placeholder="Введите ваше имя"
+              placeholderTextColor={colors.textMuted}
               value={formData.firstName}
               onChangeText={(value) => handleInputChange('firstName', value)}
               autoCapitalize="words"
@@ -231,6 +235,7 @@ const RegisterScreen = ({ navigation }) => {
                 errors.lastName && styles.inputError,
               ]}
               placeholder="Введите вашу фамилию"
+              placeholderTextColor={colors.textMuted}
               value={formData.lastName}
               onChangeText={(value) => handleInputChange('lastName', value)}
               autoCapitalize="words"
@@ -250,6 +255,7 @@ const RegisterScreen = ({ navigation }) => {
                 errors.email && styles.inputError,
               ]}
               placeholder="Введите ваш email"
+              placeholderTextColor={colors.textMuted}
               value={formData.email}
               onChangeText={(value) => handleInputChange('email', value)}
               keyboardType="email-address"
@@ -271,6 +277,7 @@ const RegisterScreen = ({ navigation }) => {
                 errors.phone && styles.inputError,
               ]}
               placeholder="+375 (XX) XXX-XX-XX"
+              placeholderTextColor={colors.textMuted}
               value={formData.phone}
               onChangeText={(value) => handleInputChange('phone', value)}
               keyboardType="phone-pad"
@@ -291,6 +298,7 @@ const RegisterScreen = ({ navigation }) => {
                   errors.password && styles.inputError,
                 ]}
                 placeholder="Введите пароль"
+                placeholderTextColor={colors.textMuted}
                 value={formData.password}
                 onChangeText={(value) => handleInputChange('password', value)}
                 secureTextEntry={!showPassword}
@@ -303,7 +311,7 @@ const RegisterScreen = ({ navigation }) => {
                 onPress={() => setShowPassword(!showPassword)}
               >
                 <Text style={styles.eyeText}>
-                  {showPassword ? '🙈' : '👁️'}
+                  {showPassword ? 'скрыть' : 'показать'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -322,6 +330,7 @@ const RegisterScreen = ({ navigation }) => {
                   errors.confirmPassword && styles.inputError,
                 ]}
                 placeholder="Повторите пароль"
+                placeholderTextColor={colors.textMuted}
                 value={formData.confirmPassword}
                 onChangeText={(value) => handleInputChange('confirmPassword', value)}
                 secureTextEntry={!showConfirmPassword}
@@ -334,7 +343,7 @@ const RegisterScreen = ({ navigation }) => {
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
                 <Text style={styles.eyeText}>
-                  {showConfirmPassword ? '🙈' : '👁️'}
+                  {showConfirmPassword ? 'скрыть' : 'показать'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -412,10 +421,10 @@ const RegisterScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.bg,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -429,12 +438,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -447,31 +456,33 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    color: colors.text,
+    backgroundColor: colors.cardBg,
+    borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E1E8ED',
+    borderColor: colors.divider,
   },
   inputError: {
-    borderColor: '#FF4444',
+    borderColor: colors.error,
     borderWidth: 1,
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: colors.cardBg,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E1E8ED',
+    borderColor: colors.divider,
   },
   passwordInput: {
+    color: colors.text,
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -485,7 +496,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   errorText: {
-    color: '#FF4444',
+    color: colors.error,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 4,
@@ -504,16 +515,16 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#E1E8ED',
+    borderColor: colors.divider,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   checkmark: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -522,20 +533,20 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
     lineHeight: 20,
   },
   termsLink: {
-    color: '#FF6B35',
+    color: colors.accent,
     textDecorationLine: 'underline',
   },
   registerButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
+    backgroundColor: colors.accent,
+    borderRadius: 20,
     paddingVertical: 16,
     alignItems: 'center',
     elevation: 2,
-    shadowColor: '#FF6B35',
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -546,12 +557,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
   },
   registerButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: '600',
   },
   checkboxError: {
-    borderColor: '#FF4444',
+    borderColor: colors.error,
   },
   disabledText: {
     color: '#ccc',
@@ -561,7 +572,7 @@ const styles = StyleSheet.create({
   },
   loginText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginBottom: 10,
   },
   loginButton: {
@@ -569,7 +580,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   loginButtonText: {
-    color: '#FF6B35',
+    color: colors.accent,
     fontSize: 16,
     fontWeight: 'bold',
   },

@@ -1,0 +1,40 @@
+name: build-android-debug
+
+# Отладочный APK для быстрого контура: ставится один раз, дальше код
+# прилетает на телефон с Metro за секунды (Fast Refresh), без новых сборок.
+# От release отличается тем, что ходит за JS-бандлом на компьютер разработчика.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+
+      - name: Build debug APK
+        run: cd android && ./gradlew assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SoloPizza-Android-debug-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

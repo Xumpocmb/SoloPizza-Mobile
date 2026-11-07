@@ -6,15 +6,19 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
+import Alert from '../utils/alertShim';
+import useAppTheme from '../theme/useAppTheme';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout, updateProfile } from '../store/slices/authSlice';
 import { userService, authService } from '../services';
 
 const ProfileScreen = ({ navigation }) => {
+  const { colors } = useAppTheme();
+  const styles = makeStyles(colors);
   const dispatch = useDispatch();
   const { user, isLoading } = useSelector((state) => state.auth);
   const [isEditing, setIsEditing] = useState(false);
@@ -231,7 +235,7 @@ const ProfileScreen = ({ navigation }) => {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          colors={['#FF6B35']}
+          colors={[colors.accent]}
         />
       }
     >
@@ -269,6 +273,7 @@ const ProfileScreen = ({ navigation }) => {
                   errors.first_name && styles.inputError,
                 ]}
                 placeholder="Ваше имя"
+                placeholderTextColor={colors.textMuted}
                 value={formData.first_name}
                 onChangeText={(value) => handleInputChange('first_name', value)}
               />
@@ -285,6 +290,7 @@ const ProfileScreen = ({ navigation }) => {
                   errors.last_name && styles.inputError,
                 ]}
                 placeholder="Ваша фамилия"
+                placeholderTextColor={colors.textMuted}
                 value={formData.last_name}
                 onChangeText={(value) => handleInputChange('last_name', value)}
               />
@@ -301,6 +307,7 @@ const ProfileScreen = ({ navigation }) => {
                   errors.phone && styles.inputError,
                 ]}
                 placeholder="+375 (XX) XXX-XX-XX"
+                placeholderTextColor={colors.textMuted}
                 value={formData.phone}
                 onChangeText={(value) => handleInputChange('phone', value)}
                 keyboardType="phone-pad"
@@ -318,6 +325,7 @@ const ProfileScreen = ({ navigation }) => {
                   errors.email && styles.inputError,
                 ]}
                 placeholder="your@email.com"
+                placeholderTextColor={colors.textMuted}
                 value={formData.email}
                 onChangeText={(value) => handleInputChange('email', value)}
                 keyboardType="email-address"
@@ -424,39 +432,44 @@ const ProfileScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.bg,
   },
   guestContainer: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.bg,
   },
   header: {
-    backgroundColor: '#FF6B35',
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    backgroundColor: colors.accent,
+    paddingTop: Platform.OS === 'web' ? 12 : 50,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: colors.buttonText,
+    textAlign: 'center',
   },
   editButton: {
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
     padding: 8,
   },
   editButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: '500',
   },
   profileSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     marginTop: 10,
     padding: 20,
     alignItems: 'center',
@@ -468,14 +481,14 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: colors.buttonText,
   },
   profileInfo: {
     alignItems: 'center',
@@ -483,17 +496,17 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 8,
   },
   userEmail: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginBottom: 4,
   },
   userPhone: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
   },
   editForm: {
     width: '100%',
@@ -504,29 +517,30 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#F8F9FA',
+    color: colors.text,
+    backgroundColor: colors.bg,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E1E8ED',
+    borderColor: colors.divider,
   },
   inputError: {
-    borderColor: '#E74C3C',
+    borderColor: colors.error,
   },
   // ИСПРАВЛЕНО ПРИ АУДИТЕ: в файле было ДВА определения errorText.
-  // Второе (серое #8E8E93, 16px, по центру) затирало первое (красное #E74C3C, 14px),
+  // Второе (серое #6c757d, 16px, по центру) затирало первое (красное #dc3545, 14px),
   // а используется этот стиль для подписей ошибок валидации полей формы
   // (строки с errors.first_name / last_name / phone / email).
   // В результате сообщения об ошибках рисовались светло-серым и были почти не видны.
   // Возвращено значение из ПЕРВОГО определения — семантически верное.
   errorText: {
-    color: '#E74C3C',
+    color: colors.error,
     fontSize: 14,
     marginTop: 5,
   },
@@ -537,25 +551,25 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#95A5A6',
+    backgroundColor: colors.textMuted,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: '600',
   },
   saveButton: {
     flex: 1,
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   saveButtonDisabled: {
-    backgroundColor: '#BDC3C7',
+    backgroundColor: colors.divider,
     opacity: 0.6,
   },
   loadingContainer: {
@@ -567,7 +581,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
   },
   errorContainer: {
     flex: 1,
@@ -576,23 +590,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   retryButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: '600',
   },
   saveButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: '600',
   },
   menuSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     marginTop: 10,
   },
   menuItem: {
@@ -602,7 +616,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.hoverBg,
   },
   menuItemLeft: {
     flexDirection: 'row',
@@ -614,24 +628,24 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     fontSize: 16,
-    color: '#2C3E50',
+    color: colors.text,
   },
   menuArrow: {
     fontSize: 20,
-    color: '#8E8E93',
+    color: colors.textMuted,
   },
   logoutSection: {
     padding: 20,
     paddingBottom: 40,
   },
   logoutButton: {
-    backgroundColor: '#E74C3C',
+    backgroundColor: colors.error,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 20,
     alignItems: 'center',
   },
   logoutButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -644,28 +658,28 @@ const styles = StyleSheet.create({
   guestTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 16,
     textAlign: 'center',
   },
   guestText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 22,
   },
   loginButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingHorizontal: 32,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 20,
     marginBottom: 12,
     minWidth: 200,
     alignItems: 'center',
   },
   loginButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -673,26 +687,26 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     paddingHorizontal: 32,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#FF6B35',
+    borderColor: colors.accent,
     minWidth: 200,
     alignItems: 'center',
   },
   registerButtonText: {
-    color: '#FF6B35',
+    color: colors.accent,
     fontSize: 16,
     fontWeight: 'bold',
   },
   statsSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     marginTop: 10,
     padding: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 15,
   },
   statsGrid: {
@@ -706,23 +720,23 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: colors.accent,
     marginBottom: 5,
   },
   statLabel: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
     textAlign: 'center',
   },
   joinDateContainer: {
     alignItems: 'center',
     paddingTop: 15,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: colors.hoverBg,
   },
   joinDateText: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
   },
 });
 

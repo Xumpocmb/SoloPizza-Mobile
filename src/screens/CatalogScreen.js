@@ -6,23 +6,26 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  Image,
   ActivityIndicator,
   RefreshControl,
-  Alert,
+  Platform,
 } from 'react-native';
+import Alert from '../utils/alertShim';
+import ProductImage from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, fetchCategories } from '../store/slices/productSlice';
 import { addToCart } from '../store/slices/cartSlice';
-import { catalogService, productService } from '../services';
+import DemoBanner from '../components/ui/DemoBanner';
+import useAppTheme from '../theme/useAppTheme';
 
 const CatalogScreen = ({ navigation }) => {
+  const { colors } = useAppTheme();
+  const styles = makeStyles(colors);
   const dispatch = useDispatch();
   const { products, categories, loading, error } = useSelector(state => state.products);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [sortBy, setSortBy] = useState('name'); // name, price_asc, price_desc
   const [refreshing, setRefreshing] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -39,13 +42,13 @@ const CatalogScreen = ({ navigation }) => {
     }, 500);
     
     return () => clearTimeout(delayedSearch);
-  }, [selectedCategory, searchQuery, sortBy]);
+  }, [selectedCategory, searchQuery]);
 
   useEffect(() => {
     filterProducts();
-  }, [products, selectedCategory, searchQuery, sortBy]);
+  }, [products, selectedCategory, searchQuery]);
 
-  const loadData = async (reset = true) => {
+  const loadData = async (reset = true, force = false) => {
     try {
       if (reset) {
         setPage(1);
@@ -54,21 +57,19 @@ const CatalogScreen = ({ navigation }) => {
         setLoadingMore(true);
       }
       
-      const [categoriesResponse, productsResponse] = await Promise.all([
-        dispatch(fetchCategories()).unwrap(),
-        productService.getProducts({
-          page: reset ? 1 : page,
-          category: selectedCategory?.id !== 'all' ? selectedCategory?.id : undefined,
+      const [categoriesResponse] = await Promise.all([
+        dispatch(fetchCategories(force)).unwrap(),
+        // список тянем сразу с серверным фильтром категории и локальным поиском;
+        // контракт app_api не отдаёт поле category в товаре, поэтому клиентская
+        // фильтрация по категории невозможна — только серверный параметр
+        dispatch(fetchProducts({
+          categoryId: selectedCategory?.id !== 'all' ? selectedCategory?.id : undefined,
           search: searchQuery || undefined,
-          ordering: sortBy === 'price_asc' ? 'price' : sortBy === 'price_desc' ? '-price' : sortBy === 'rating' ? '-rating' : 'name',
-        })
+          force,
+        })).unwrap(),
       ]);
-      
-      // Update products
-      if (reset) {
-        dispatch(fetchProducts()).unwrap();
-      }
-      
+      void categoriesResponse;
+
       // Update pagination
       if (reset) {
         setPage(2);
@@ -76,11 +77,7 @@ const CatalogScreen = ({ navigation }) => {
         setPage(prev => prev + 1);
       }
       
-      setHasMore(productsResponse?.next ? true : false);
-      
-      // Также можно использовать catalogService для дополнительных данных
-      const additionalData = await catalogService.getProducts();
-      console.log('Additional catalog data:', additionalData);
+      setHasMore(false); // пагинации в app_api нет, список приходит целиком
     } catch (error) {
       console.error('Ошибка загрузки данных:', error);
     } finally {
@@ -96,7 +93,8 @@ const CatalogScreen = ({ navigation }) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData(true);
+    // pull-to-refresh обходит тёплый кэш (дефект №2)
+    await loadData(true, true);
     setRefreshing(false);
   };
 
@@ -122,58 +120,43 @@ const CatalogScreen = ({ navigation }) => {
       );
     }
 
-    // Фильтрация по категории
-    if (selectedCategory) {
-      filtered = filtered.filter(product => 
-        product.category === selectedCategory.id || product.category_id === selectedCategory.id
-      );
-    }
+    // Фильтрация по категории НЕ делается локально: контракт app_api не отдаёт
+    // поле category в списке товаров, категорию фильтрует сервер по query-параметру
+    // (getProducts({ category }) в catalogService). Локально оставляем поиск и сортировку.
 
-    // Сортировка
-    switch (sortBy) {
-      case 'price_asc':
-        filtered.sort((a, b) => (a.price || a.base_price || 0) - (b.price || b.base_price || 0));
-        break;
-      case 'price_desc':
-        filtered.sort((a, b) => (b.price || b.base_price || 0) - (a.price || a.base_price || 0));
-        break;
-      case 'name':
-      default:
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-    }
+    // Сортировки нет намеренно: порядок задаёт сервер
+    // (app_api: category__order, name). Убрана по решению пользователя.
 
     setFilteredProducts(filtered);
   };
 
-  const renderCategory = ({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.categoryItem,
-        selectedCategory?.id === item.id && styles.selectedCategory
-      ]}
-      onPress={() => setSelectedCategory(selectedCategory?.id === item.id ? null : item)}
-    >
-      <Text style={[
-        styles.categoryText,
-        selectedCategory?.id === item.id && styles.selectedCategoryText
-      ]}>
-        {item.name}
-      </Text>
-    </TouchableOpacity>
-  );
+  const renderCategory = ({ item }) => {
+    const isAll = item.id === 'all';
+    const selected = isAll ? !selectedCategory : selectedCategory?.id === item.id;
+    return (
+      <TouchableOpacity
+        style={[
+          styles.categoryItem,
+          selected && styles.selectedCategory
+        ]}
+        onPress={() => setSelectedCategory(isAll ? null : selected ? null : item)}
+      >
+        <Text style={[
+          styles.categoryText,
+          selected && styles.selectedCategoryText
+        ]}>
+          {item.name}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   const renderProduct = ({ item }) => (
     <TouchableOpacity
       style={styles.productCard}
       onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
     >
-      <Image
-        source={{ uri: item.image || item.main_image || item.images?.[0]?.image || 'https://via.placeholder.com/150' }}
-        style={styles.productImage}
-        resizeMode="cover"
-        defaultSource={{ uri: 'https://via.placeholder.com/150/FF6B35/FFFFFF?text=Product' }}
-      />
+      <ProductImage uri={item.image || item.main_image || item.images?.[0]?.image} style={styles.productImage} />
       {(item.is_popular || item.isPopular) && (
         <View style={styles.popularBadge}>
           <Text style={styles.popularText}>Популярное</Text>
@@ -197,27 +180,11 @@ const CatalogScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  const renderSortButton = (value, label) => (
-    <TouchableOpacity
-      style={[
-        styles.sortButton,
-        sortBy === value && styles.selectedSortButton
-      ]}
-      onPress={() => setSortBy(value)}
-    >
-      <Text style={[
-        styles.sortButtonText,
-        sortBy === value && styles.selectedSortButtonText
-      ]}>
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
 
   if (loading && !refreshing) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#079b59" />
         <Text style={styles.loadingText}>Загрузка каталога...</Text>
       </View>
     );
@@ -236,14 +203,17 @@ const CatalogScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      <DemoBanner />
+
       {/* Поиск */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
           placeholder="Поиск товаров..."
+          placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textMuted}
         />
       </View>
 
@@ -251,9 +221,9 @@ const CatalogScreen = ({ navigation }) => {
       {categories.length > 0 && (
         <View style={styles.categoriesContainer}>
           <FlatList
-            data={categories}
+            data={[{ id: 'all', name: 'Все' }, ...categories]}
             renderItem={renderCategory}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item) => String(item.id)}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesList}
@@ -261,28 +231,25 @@ const CatalogScreen = ({ navigation }) => {
         </View>
       )}
 
-      {/* Сортировка */}
-      <View style={styles.sortContainer}>
-        <Text style={styles.sortLabel}>Сортировка:</Text>
-        <View style={styles.sortButtons}>
-          {renderSortButton('name', 'По названию')}
-          {renderSortButton('price_asc', 'Цена ↑')}
-          {renderSortButton('price_desc', 'Цена ↓')}
-        </View>
-      </View>
-
       {/* Список товаров */}
       <FlatList
         data={filteredProducts}
         renderItem={renderProduct}
         keyExtractor={(item) => item.id.toString()}
+        // 02.11.2026: тяжёлые медиа сайта (png 200–400 kB) — держим окно
+        // виртуализации узким, чтобы офскрин-карточки не тянули картинки
+        // сразу; на веб ленивость даёт loading="lazy" в ProductImage
+        windowSize={9}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        removeClippedSubviews={Platform.OS !== 'web'}
         numColumns={2}
         contentContainerStyle={styles.productsList}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#FF6B35']}
+            colors={[colors.accent]}
           />
         }
         onEndReached={loadMore}
@@ -291,7 +258,7 @@ const CatalogScreen = ({ navigation }) => {
           if (loadingMore) {
             return (
               <View style={styles.loadingMoreContainer}>
-                <ActivityIndicator size="small" color="#FF6B35" />
+                <ActivityIndicator size="small" color="#079b59" />
               </View>
             );
           }
@@ -308,129 +275,130 @@ const CatalogScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: colors.textMuted,
   },
   errorText: {
     fontSize: 16,
-    color: '#dc3545',
+    color: colors.error,
     textAlign: 'center',
     marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: 'white',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: '600',
   },
   searchContainer: {
     padding: 15,
-    backgroundColor: 'white',
+    backgroundColor: colors.cardBg,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.divider,
   },
   searchInput: {
-    backgroundColor: '#f8f9fa',
+    color: colors.text,
+    backgroundColor: colors.bg,
     borderRadius: 10,
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.divider,
   },
   categoriesContainer: {
-    backgroundColor: 'white',
+    backgroundColor: colors.cardBg,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.divider,
   },
   categoriesList: {
     paddingHorizontal: 15,
   },
   categoryItem: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 20,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.divider,
   },
   selectedCategory: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   categoryText: {
     fontSize: 14,
-    color: '#333',
+    color: colors.text,
     fontWeight: '500',
   },
   selectedCategoryText: {
-    color: 'white',
+    color: colors.buttonText,
   },
   sortContainer: {
-    backgroundColor: 'white',
+    backgroundColor: colors.cardBg,
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.divider,
   },
   sortLabel: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 10,
-    color: '#333',
+    color: colors.text,
   },
   sortButtons: {
     flexDirection: 'row',
     gap: 10,
   },
   sortButton: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 15,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.divider,
   },
   selectedSortButton: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   sortButtonText: {
     fontSize: 12,
-    color: '#333',
+    color: colors.text,
     fontWeight: '500',
   },
   selectedSortButtonText: {
-    color: 'white',
+    color: colors.buttonText,
   },
   productsList: {
     padding: 15,
   },
   productCard: {
     flex: 1,
-    backgroundColor: 'white',
-    borderRadius: 12,
+    backgroundColor: colors.cardBg,
+    borderRadius: 20,
     margin: 5,
-    shadowColor: '#000',
+    shadowColor: colors.text,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -451,12 +419,12 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     marginBottom: 4,
   },
   productDescription: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textMuted,
     marginBottom: 8,
     lineHeight: 16,
   },
@@ -468,18 +436,18 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FF6B35',
+    color: colors.accent,
   },
   addButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     width: 30,
     height: 30,
-    borderRadius: 15,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   addButtonText: {
-    color: 'white',
+    color: colors.buttonText,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -491,12 +459,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textMuted,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -504,14 +472,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
     zIndex: 1,
   },
   popularText: {
-    color: 'white',
+    color: colors.buttonText,
     fontSize: 10,
     fontWeight: '600',
   },

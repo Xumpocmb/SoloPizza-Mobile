@@ -5,20 +5,22 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import Alert from '../utils/alertShim';
+import useAppTheme from '../theme/useAppTheme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // ИСПРАВЛЕНО ПРИ АУДИТЕ: прямой импорт react-native-vector-icons в v10.x
 // не тянет шрифт — иконки рендерились пустыми квадратами.
-import Icon from '../components/ui/Icon';
 import { authService } from '../services';
 
 const LoginScreen = ({ navigation }) => {
+  const { colors } = useAppTheme();
+  const styles = makeStyles(colors);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -148,6 +150,7 @@ const LoginScreen = ({ navigation }) => {
             <TextInput
               style={[styles.input, errors.email && styles.inputError]}
               placeholder="Email"
+              placeholderTextColor={colors.textMuted}
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
@@ -172,6 +175,7 @@ const LoginScreen = ({ navigation }) => {
               <TextInput
                 style={styles.passwordInput}
                 placeholder="Пароль"
+                placeholderTextColor={colors.textMuted}
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
@@ -188,12 +192,11 @@ const LoginScreen = ({ navigation }) => {
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(!showPassword)}
                 disabled={loading}
+                accessibilityLabel={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
               >
-                <Icon
-                  name={showPassword ? 'visibility' : 'visibility-off'}
-                  size={24}
-                  color={loading ? '#ccc' : '#666'}
-                />
+                <Text style={styles.eyeText}>
+                  {showPassword ? 'скрыть' : 'показать'}
+                </Text>
               </TouchableOpacity>
             </View>
             {errors.password && (
@@ -252,10 +255,10 @@ const LoginScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.bg,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -270,12 +273,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -288,30 +291,32 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    color: colors.text,
+    backgroundColor: colors.cardBg,
+    borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E1E8ED',
+    borderColor: colors.divider,
   },
   inputError: {
-    borderColor: '#E74C3C',
+    borderColor: colors.error,
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: colors.cardBg,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E1E8ED',
+    borderColor: colors.divider,
   },
   passwordInput: {
+    color: colors.text,
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -322,10 +327,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   eyeText: {
-    fontSize: 18,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
   },
   errorText: {
-    color: '#E74C3C',
+    color: colors.error,
     fontSize: 14,
     marginTop: 5,
   },
@@ -334,28 +341,28 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   forgotPasswordText: {
-    color: '#FF6B35',
+    color: colors.accent,
     fontSize: 14,
     fontWeight: '500',
   },
   loginButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
+    backgroundColor: colors.accent,
+    borderRadius: 20,
     paddingVertical: 16,
     alignItems: 'center',
     elevation: 2,
-    shadowColor: '#FF6B35',
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
   loginButtonDisabled: {
-    backgroundColor: '#BDC3C7',
+    backgroundColor: colors.divider,
     elevation: 0,
     shadowOpacity: 0,
   },
   loginButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -365,7 +372,7 @@ const styles = StyleSheet.create({
   },
   registerText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginBottom: 10,
   },
   registerButton: {
@@ -373,9 +380,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   registerButtonText: {
-    color: '#FF6B35',
+    color: colors.accent,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  registerLink: {
+    color: colors.accent,
+    fontWeight: '700',
+  },
+  disabledText: {
+    opacity: 0.6,
   },
   guestSection: {
     alignItems: 'center',
@@ -385,7 +399,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   guestButtonText: {
-    color: '#8E8E93',
+    color: colors.textMuted,
     fontSize: 14,
     textDecorationLine: 'underline',
   },

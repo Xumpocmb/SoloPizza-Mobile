@@ -5,46 +5,54 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   FlatList,
   ActivityIndicator,
   RefreshControl,
   Dimensions,
+  Platform,
 } from 'react-native';
+import ProductImage, { CATEGORY_GLYPHS } from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchFeaturedProducts, fetchCategories } from '../store/slices/productSlice';
 import { addToCart } from '../store/slices/cartSlice';
-import { catalogService, productService, promoService } from '../services';
+import { catalogService, productService, promoService, vacancyService } from '../services';
+import DemoBanner from '../components/ui/DemoBanner';
+import WeeklySpecialBanner from '../components/WeeklySpecialBanner';
+import useAppTheme from '../theme/useAppTheme';
+import { num } from '../utils/money';
 
 const { width } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
+  const { colors } = useAppTheme();
+  const styles = makeStyles(colors);
   const dispatch = useDispatch();
   const { featuredProducts, categories, loading } = useSelector(state => state.products);
-  const { user } = useSelector(state => state.auth);
   
   const [refreshing, setRefreshing] = useState(false);
   const [bannerIndex, setBannerIndex] = useState(0);
   const [apiCategories, setApiCategories] = useState([]);
   const [apiProducts, setApiProducts] = useState([]);
+  const [weekly, setWeekly] = useState(null);
+  const [vacancies, setVacancies] = useState([]);
   const [banners, setBanners] = useState([
     {
       id: 1,
       title: 'Скидка 20%',
       subtitle: 'На все пиццы до конца недели',
-      backgroundColor: '#FF6B35',
+      backgroundColor: colors.accent,
     },
     {
       id: 2,
       title: 'Новинка!',
       subtitle: 'Попробуйте нашу новую пиццу "Четыре сыра"',
-      backgroundColor: '#28A745',
+      backgroundColor: colors.success,
     },
     {
       id: 3,
       title: 'Быстрая доставка',
       subtitle: 'Доставим за 30 минут или пицца бесплатно',
-      backgroundColor: '#007BFF',
+      backgroundColor: colors.accent,
     },
   ]);
 
@@ -55,13 +63,19 @@ const HomeScreen = ({ navigation }) => {
     loadApiData();
   }, []);
 
-  const loadApiData = async () => {
+  const loadApiData = async (force = false) => {
     try {
-      const [categoriesData, productsData, promosData] = await Promise.all([
-        catalogService.getCategories(),
-        productService.getPopularProducts({ limit: 6 }),
+      const [categoriesData, productsData, promosData, weeklyData, vacanciesData] = await Promise.all([
+        catalogService.getCategories({ force }),
+        productService.getPopularProducts({ limit: 6, force }),
         promoService.getActivePromos(),
+        // v1.1: блюдо недели — один объект или null (блока просто нет)
+        catalogService.getWeeklySpecial({ force }),
+        // v1.1: вакансии — блок главной страницы, как на сайте друга
+        vacancyService.getVacancies(),
       ]);
+      setWeekly(weeklyData || null);
+      setVacancies(Array.isArray(vacanciesData) ? vacanciesData : []);
       
       setApiCategories(categoriesData.results || categoriesData || []);
       setApiProducts(productsData.results || productsData || []);
@@ -72,7 +86,7 @@ const HomeScreen = ({ navigation }) => {
           id: promo.id,
           title: promo.title,
           subtitle: promo.description || promo.subtitle,
-          backgroundColor: promo.background_color || '#FF6B35',
+          backgroundColor: promo.background_color || colors.accent,
         }));
         setBanners(apiBanners);
       }
@@ -90,11 +104,13 @@ const HomeScreen = ({ navigation }) => {
     return () => clearInterval(interval);
   }, [banners.length]);
 
-  const loadData = async () => {
+  // 02.11.2026: force=true только для pull-to-refresh — обычный монтаж экрана
+  // берёт тёплый кэш каталога и не дублирует запросы (дефект №2)
+  const loadData = async (force = false) => {
     try {
       await Promise.all([
-        dispatch(fetchFeaturedProducts()).unwrap(),
-        dispatch(fetchCategories()).unwrap()
+        dispatch(fetchFeaturedProducts({ force })).unwrap(),
+        dispatch(fetchCategories(force)).unwrap()
       ]);
     } catch (error) {
       console.error('Ошибка загрузки данных:', error);
@@ -103,7 +119,7 @@ const HomeScreen = ({ navigation }) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadData(), loadApiData()]);
+    await Promise.all([loadData(true), loadApiData(true)]);
     setRefreshing(false);
   };
 
@@ -130,10 +146,9 @@ const HomeScreen = ({ navigation }) => {
       style={styles.productCard}
       onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
     >
-      <Image 
-        source={{ uri: item.image || item.main_image || item.images?.[0]?.image || 'https://via.placeholder.com/150' }} 
+      <ProductImage 
+        uri={item.image || item.main_image || item.images?.[0]?.image} 
         style={styles.productImage}
-        defaultSource={{ uri: 'https://via.placeholder.com/150x150/FF6B35/FFFFFF?text=Pizza' }}
       />
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
@@ -142,7 +157,7 @@ const HomeScreen = ({ navigation }) => {
         </Text>
         <View style={styles.productFooter}>
           <Text style={styles.productPrice}>
-            {(item.price || item.base_price)?.toFixed ? (item.price || item.base_price).toFixed(2) : (item.price || item.base_price)} ₽
+            {num(item.price ?? item.base_price).toFixed(2)} BYN
           </Text>
           <TouchableOpacity 
             style={styles.addButton}
@@ -160,9 +175,11 @@ const HomeScreen = ({ navigation }) => {
       style={styles.categoryCard}
       onPress={() => navigateToCategory(item)}
     >
-      <Image
-        source={{ uri: item.image || 'https://via.placeholder.com/80' }}
+      <ProductImage
+        uri={item.image}
+        glyph={CATEGORY_GLYPHS[item.slug] || '🍽'}
         style={styles.categoryImage}
+        emojiSize={32}
       />
       <Text style={styles.categoryName}>{item.name}</Text>
     </TouchableOpacity>
@@ -171,7 +188,7 @@ const HomeScreen = ({ navigation }) => {
   if (loading && !featuredProducts?.length && !categories?.length) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#079b59" />
         <Text style={styles.loadingText}>Загрузка...</Text>
       </View>
     );
@@ -184,13 +201,40 @@ const HomeScreen = ({ navigation }) => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>SoloPizza</Text>
-        <Text style={styles.headerSubtitle}>
-          {user ? `Привет, ${user.first_name || 'Друг'}!` : 'Лучшая пицца в городе'}
-        </Text>
+      <DemoBanner />
+
+
+      {/* Featured Products Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Новинки</Text>
+          <TouchableOpacity onPress={navigateToAllProducts}>
+            <Text style={styles.seeAllText}>Все</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {(apiProducts?.length > 0 ? apiProducts : featuredProducts)?.length > 0 ? (
+          <FlatList
+            data={(apiProducts?.length > 0 ? apiProducts : featuredProducts).slice(0, 6)}
+            renderItem={renderFeaturedProduct}
+            keyExtractor={(item) => item.id.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.productsList}
+          />
+        ) : (
+          <Text style={styles.emptyText}>Товары не найдены</Text>
+        )}
       </View>
+
+      {/* Пицца недели (v1.1): блок из макетов design/weekly-special-*.png */}
+      {weekly ? (
+        <WeeklySpecialBanner
+          product={weekly}
+          onAdd={() => handleAddToCart(weekly)}
+          onPress={() => navigation.navigate('ProductDetail', { productId: weekly.id })}
+        />
+      ) : null}
 
       {/* Banner Carousel */}
       <View style={styles.bannerContainer}>
@@ -210,6 +254,7 @@ const HomeScreen = ({ navigation }) => {
           ))}
         </View>
       </View>
+
 
       {/* Categories Section */}
       <View style={styles.section}>
@@ -234,90 +279,63 @@ const HomeScreen = ({ navigation }) => {
         )}
       </View>
 
-      {/* Featured Products Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Рекомендуемые</Text>
-          <TouchableOpacity onPress={navigateToAllProducts}>
-            <Text style={styles.seeAllText}>Все</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {(apiProducts?.length > 0 ? apiProducts : featuredProducts)?.length > 0 ? (
+      {/* Вакансии (v1.1): блок главной, вход в список — «Все вакансии» */}
+      {vacancies.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Вакансии</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Vacancies')}>
+              <Text style={styles.seeAllText}>Все вакансии</Text>
+            </TouchableOpacity>
+          </View>
           <FlatList
-            data={(apiProducts?.length > 0 ? apiProducts : featuredProducts).slice(0, 6)}
-            renderItem={renderFeaturedProduct}
-            keyExtractor={(item) => item.id.toString()}
+            data={vacancies.slice(0, 5)}
+            keyExtractor={(item) => String(item.id)}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.productsList}
+            contentContainerStyle={styles.vacanciesList}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.vacancyCard}
+                onPress={() => navigation.navigate('VacancyDetail', { vacancyId: item.id })}
+              >
+                <Text style={styles.vacancyTitle}>{item.title}</Text>
+                <Text style={styles.vacancySalary}>
+                  {item.salary ? `${item.salary} BYN` : 'по договорённости'}
+                </Text>
+              </TouchableOpacity>
+            )}
           />
-        ) : (
-          <Text style={styles.emptyText}>Товары не найдены</Text>
-        )}
-      </View>
+        </View>
+      )}
+      {/* Доставка и контакты: блоки встанут сюда после API друга (home v2) */}
 
-      {/* Info Section */}
-      <View style={styles.infoSection}>
-        <Text style={styles.infoTitle}>Почему выбирают нас?</Text>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoItemTitle}>🍕 Свежие ингредиенты</Text>
-          <Text style={styles.infoItemText}>Используем только качественные продукты</Text>
-        </View>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoItemTitle}>🚚 Быстрая доставка</Text>
-          <Text style={styles.infoItemText}>Доставим горячую пиццу за 30 минут</Text>
-        </View>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoItemTitle}>💰 Выгодные цены</Text>
-          <Text style={styles.infoItemText}>Лучшие цены в городе</Text>
-        </View>
-      </View>
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: '#FF6B35',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#fff',
-    textAlign: 'center',
-    marginTop: 5,
-    opacity: 0.9,
+    color: colors.textMuted,
   },
   bannerContainer: {
     margin: 20,
-    borderRadius: 15,
+    borderRadius: 20,
     overflow: 'hidden',
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
@@ -331,13 +349,13 @@ const styles = StyleSheet.create({
   bannerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.buttonText,
     textAlign: 'center',
     marginBottom: 5,
   },
   bannerSubtitle: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.buttonText,
     textAlign: 'center',
   },
   bannerIndicators: {
@@ -350,7 +368,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBg,
     marginHorizontal: 4,
   },
   section: {
@@ -366,16 +384,39 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
+  },
+  vacanciesList: {
+    paddingHorizontal: 16,
+  },
+  vacancyCard: {
+    width: 200,
+    marginRight: 12,
+    backgroundColor: colors.cardBg,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    padding: 14,
+  },
+  vacancyTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  vacancySalary: {
+    marginTop: 6,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.accent,
   },
   seeAllText: {
-    color: '#FF6B35',
+    color: colors.accent,
     fontSize: 16,
     fontWeight: '600',
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textMuted,
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -391,12 +432,12 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBg,
     marginBottom: 8,
   },
   categoryName: {
     fontSize: 12,
-    color: '#333',
+    color: colors.text,
     textAlign: 'center',
     fontWeight: '500',
   },
@@ -404,12 +445,12 @@ const styles = StyleSheet.create({
     paddingLeft: 5,
   },
   productCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
+    backgroundColor: colors.cardBg,
+    borderRadius: 20,
     marginRight: 15,
     width: 160,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
@@ -426,12 +467,12 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
     marginBottom: 4,
   },
   productDescription: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textMuted,
     marginBottom: 8,
     lineHeight: 16,
   },
@@ -443,13 +484,13 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: colors.accent,
   },
   addButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     width: 30,
     height: 30,
-    borderRadius: 15,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -459,48 +500,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   promoDiscount: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 18,
     fontWeight: 'bold',
     marginTop: 4,
   },
   addButtonText: {
-    color: '#fff',
+    color: colors.buttonText,
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  infoSection: {
-    marginHorizontal: 20,
-    marginBottom: 30,
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.22,
-    shadowRadius: 2.22,
-  },
-  infoTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  infoItem: {
-    marginBottom: 15,
-  },
-  infoItemTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  infoItemText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
   },
 });
 

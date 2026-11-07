@@ -1,182 +1,107 @@
+// Корзина: полностью локальная (redux + AsyncStorage).
+// В app_api друга эндпоинтов корзины пока нет — никаких серверных вызовов,
+// иначе 404 и красные тосты LogBox. Когда появится quote_cart/order,
+// серверная синхронизация вернётся отдельным слоем.
+//
+// ВАЖНО: старый slice ожидал {productId, options} и выбрасывал name/price/image,
+// из-за чего в корзине лежали позиции без цены → краш toFixed. Теперь slice
+// принимает ГОТОВУЮ позицию {id, name, price, image, quantity, size?, toppings?}
+// и хранит её как есть (price нормализуется в число через num()).
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import { num } from '../../utils/money';
 
-const API_BASE_URL = 'http://localhost:8000/api';
 const CART_STORAGE_KEY = 'cart_items';
 
-// Асинхронные действия
-export const addToCart = createAsyncThunk(
-  'cart/addToCart',
-  async ({ productId, quantity = 1, options = {} }, { getState, rejectWithValue }) => {
-    try {
-      const { auth } = getState();
-      
-      if (auth.isAuthenticated) {
-        // Если пользователь авторизован, отправляем на сервер
-        const response = await axios.post(
-          `${API_BASE_URL}/cart/add/`,
-          {
-            product_id: productId,
-            quantity,
-            options,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${auth.accessToken}`,
-            },
-          }
-        );
-        return response.data;
-      } else {
-        // Если не авторизован, сохраняем локально
-        const cartItems = await AsyncStorage.getItem(CART_STORAGE_KEY);
-        const items = cartItems ? JSON.parse(cartItems) : [];
-        
-        const existingItemIndex = items.findIndex(
-          item => item.productId === productId && 
-          JSON.stringify(item.options) === JSON.stringify(options)
-        );
-        
-        if (existingItemIndex >= 0) {
-          items[existingItemIndex].quantity += quantity;
-        } else {
-          items.push({
-            id: Date.now().toString(),
-            productId,
-            quantity,
-            options,
-            addedAt: new Date().toISOString(),
-          });
-        }
-        
-        await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-        return { items };
-      }
-    } catch (error) {
-      return rejectWithValue('Ошибка добавления в корзину');
-    }
+const readItems = async () => {
+  try {
+    const raw = await AsyncStorage.getItem(CART_STORAGE_KEY);
+    const items = raw ? JSON.parse(raw) : [];
+    return Array.isArray(items) ? items : [];
+  } catch {
+    return [];
   }
-);
+};
 
-export const removeFromCart = createAsyncThunk(
-  'cart/removeFromCart',
-  async (itemId, { getState, rejectWithValue }) => {
-    try {
-      const { auth } = getState();
-      
-      if (auth.isAuthenticated) {
-        await axios.delete(`${API_BASE_URL}/cart/remove/${itemId}/`, {
-          headers: {
-            Authorization: `Bearer ${auth.accessToken}`,
-          },
-        });
-        return { itemId };
-      } else {
-        const cartItems = await AsyncStorage.getItem(CART_STORAGE_KEY);
-        const items = cartItems ? JSON.parse(cartItems) : [];
-        const filteredItems = items.filter(item => item.id !== itemId);
-        
-        await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(filteredItems));
-        return { items: filteredItems };
-      }
-    } catch (error) {
-      return rejectWithValue('Ошибка удаления из корзины');
-    }
+const writeItems = async (items) => {
+  try {
+    await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    // персист не критичен: состояние в redux уже обновлено
   }
-);
+};
+
+// Гидрация при старте приложения (иначе после перезапуска корзина пуста,
+// пока пользователь что-нибудь не добавит).
+export const loadCart = createAsyncThunk('cart/loadCart', async () => readItems());
+
+// Старое имя — оставляем алиасом, чтобы ничего не отвалилось.
+export const fetchCart = loadCart;
+
+export const addToCart = createAsyncThunk('cart/addToCart', async (item = {}) => {
+  const items = await readItems();
+  const incoming = {
+    ...item,
+    id: item.id ?? item.productId ?? `item_${Date.now()}`,
+    productId: item.productId ?? item.id,
+    price: num(item.price),
+    quantity: num(item.quantity) || 1,
+  };
+  const idx = items.findIndex((i) => String(i.id) === String(incoming.id));
+  let next;
+  if (idx >= 0) {
+    next = items.map((i, n) =>
+      n === idx ? { ...i, ...incoming, quantity: num(i.quantity) + incoming.quantity } : i,
+    );
+  } else {
+    next = [...items, incoming];
+  }
+  await writeItems(next);
+  return next;
+});
+
+export const removeFromCart = createAsyncThunk('cart/removeFromCart', async (arg) => {
+  // Совместимость: вызывают и removeFromCart(id), и removeFromCart({itemId})
+  const id = arg && typeof arg === 'object' ? arg.itemId : arg;
+  const items = (await readItems()).filter((i) => String(i.id) !== String(id));
+  await writeItems(items);
+  return items;
+});
 
 export const updateCartItemQuantity = createAsyncThunk(
   'cart/updateCartItemQuantity',
-  async ({ itemId, quantity }, { getState, rejectWithValue }) => {
-    try {
-      const { auth } = getState();
-      
-      if (auth.isAuthenticated) {
-        const response = await axios.patch(
-          `${API_BASE_URL}/cart/update/${itemId}/`,
-          { quantity },
-          {
-            headers: {
-              Authorization: `Bearer ${auth.accessToken}`,
-            },
-          }
-        );
-        return response.data;
-      } else {
-        const cartItems = await AsyncStorage.getItem(CART_STORAGE_KEY);
-        const items = cartItems ? JSON.parse(cartItems) : [];
-        
-        const itemIndex = items.findIndex(item => item.id === itemId);
-        if (itemIndex >= 0) {
-          if (quantity <= 0) {
-            items.splice(itemIndex, 1);
-          } else {
-            items[itemIndex].quantity = quantity;
-          }
-        }
-        
-        await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-        return { items };
-      }
-    } catch (error) {
-      return rejectWithValue('Ошибка обновления количества');
-    }
-  }
+  async ({ itemId, quantity }) => {
+    const current = await readItems();
+    const qty = num(quantity);
+    const items =
+      qty <= 0
+        ? current.filter((i) => String(i.id) !== String(itemId))
+        : current.map((i) => (String(i.id) === String(itemId) ? { ...i, quantity: qty } : i));
+    await writeItems(items);
+    return items;
+  },
 );
 
-export const fetchCart = createAsyncThunk(
-  'cart/fetchCart',
-  async (_, { getState, rejectWithValue }) => {
-    try {
-      const { auth } = getState();
-      
-      if (auth.isAuthenticated) {
-        const response = await axios.get(`${API_BASE_URL}/cart/`, {
-          headers: {
-            Authorization: `Bearer ${auth.accessToken}`,
-          },
-        });
-        return response.data;
-      } else {
-        const cartItems = await AsyncStorage.getItem(CART_STORAGE_KEY);
-        const items = cartItems ? JSON.parse(cartItems) : [];
-        return { items, total: 0 };
-      }
-    } catch (error) {
-      return rejectWithValue('Ошибка загрузки корзины');
-    }
-  }
-);
-
-export const clearCart = createAsyncThunk(
-  'cart/clearCart',
-  async (_, { getState, rejectWithValue }) => {
-    try {
-      const { auth } = getState();
-      
-      if (auth.isAuthenticated) {
-        await axios.delete(`${API_BASE_URL}/cart/clear/`, {
-          headers: {
-            Authorization: `Bearer ${auth.accessToken}`,
-          },
-        });
-      }
-      
-      await AsyncStorage.removeItem(CART_STORAGE_KEY);
-      return {};
-    } catch (error) {
-      return rejectWithValue('Ошибка очистки корзины');
-    }
-  }
-);
+export const clearCart = createAsyncThunk('cart/clearCart', async () => {
+  await AsyncStorage.removeItem(CART_STORAGE_KEY);
+  return [];
+});
 
 const initialState = {
   items: [],
   total: 0,
+  totalAmount: 0,
   itemsCount: 0,
   isLoading: false,
   error: null,
+};
+
+// Единый пересчёт итогов: цены с сервера приходят строками ("12.50") — num().
+const applyItems = (state, items) => {
+  state.items = items;
+  state.totalAmount = items.reduce((s, i) => s + num(i.price) * num(i.quantity), 0);
+  state.total = state.totalAmount;
+  state.itemsCount = items.reduce((s, i) => s + num(i.quantity), 0);
 };
 
 const cartSlice = createSlice({
@@ -189,73 +114,30 @@ const cartSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Add to Cart
-      .addCase(addToCart.pending, (state) => {
+      .addCase(loadCart.pending, (state) => {
         state.isLoading = true;
-        state.error = null;
+      })
+      .addCase(loadCart.fulfilled, (state, action) => {
+        state.isLoading = false;
+        applyItems(state, action.payload || []);
+      })
+      .addCase(loadCart.rejected, (state) => {
+        state.isLoading = false;
       })
       .addCase(addToCart.fulfilled, (state, action) => {
-        state.isLoading = false;
-        if (action.payload.items) {
-          state.items = action.payload.items;
-          state.itemsCount = action.payload.items.length;
-        }
+        applyItems(state, action.payload || []);
       })
-      .addCase(addToCart.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload;
-      })
-      
-      // Remove from Cart
       .addCase(removeFromCart.fulfilled, (state, action) => {
-        if (action.payload.items) {
-          state.items = action.payload.items;
-          state.itemsCount = action.payload.items.length;
-        } else {
-          state.items = state.items.filter(item => item.id !== action.payload.itemId);
-          state.itemsCount = state.items.length;
-        }
+        applyItems(state, action.payload || []);
       })
-      .addCase(removeFromCart.rejected, (state, action) => {
-        state.error = action.payload;
-      })
-      
-      // Update Cart Item Quantity
       .addCase(updateCartItemQuantity.fulfilled, (state, action) => {
-        if (action.payload.items) {
-          state.items = action.payload.items;
-          state.itemsCount = action.payload.items.length;
-        }
+        applyItems(state, action.payload || []);
       })
-      .addCase(updateCartItemQuantity.rejected, (state, action) => {
-        state.error = action.payload;
-      })
-      
-      // Fetch Cart
-      .addCase(fetchCart.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(fetchCart.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.items = action.payload.items || [];
-        state.total = action.payload.total || 0;
-        state.itemsCount = (action.payload.items || []).length;
-      })
-      .addCase(fetchCart.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload;
-      })
-      
-      // Clear Cart
       .addCase(clearCart.fulfilled, (state) => {
-        state.items = [];
-        state.total = 0;
-        state.itemsCount = 0;
-      })
-      .addCase(clearCart.rejected, (state, action) => {
-        state.error = action.payload;
+        applyItems(state, []);
       });
+    // rejected-ветки намеренно тихие: корзина локальная, падать нечему,
+    // а красные тосты LogBox уже стоили нам нервов.
   },
 });
 

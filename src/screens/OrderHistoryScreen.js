@@ -7,8 +7,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
+import Alert from '../utils/alertShim';
+import useAppTheme from '../theme/useAppTheme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchOrderHistory, cancelOrder } from '../store/slices/orderSlice';
@@ -18,6 +19,8 @@ import { orderService } from '../services';
 import Icon from '../components/ui/Icon';
 
 const OrderHistoryScreen = ({ navigation }) => {
+  const { colors } = useAppTheme();
+  const styles = makeStyles(colors);
   const dispatch = useDispatch();
   const { orders, isLoading, error } = useSelector((state) => state.order);
   const { user } = useSelector((state) => state.auth);
@@ -96,21 +99,21 @@ const OrderHistoryScreen = ({ navigation }) => {
       case 'pending':
         return '#F39C12';
       case 'confirmed':
-        return '#3498DB';
+        return colors.accent;
       case 'preparing':
       case 'in_progress':
         return '#9B59B6';
       case 'ready':
-        return '#2ECC71';
+        return colors.success;
       case 'delivering':
       case 'out_for_delivery':
-        return '#1ABC9C';
+        return colors.accent;
       case 'delivered':
-        return '#27AE60';
+        return colors.success;
       case 'cancelled':
-        return '#E74C3C';
+        return colors.error;
       default:
-        return '#95A5A6';
+        return colors.textMuted;
     }
   };
 
@@ -244,7 +247,7 @@ const OrderHistoryScreen = ({ navigation }) => {
             handleRepeatOrder(item.id);
           }}
         >
-          <Icon name="refresh" size={16} color="#FF6B35" />
+          <Icon name="refresh" size={16} color="#079b59" />
           <Text style={styles.actionButtonText}>Повторить</Text>
         </TouchableOpacity>
         
@@ -255,7 +258,7 @@ const OrderHistoryScreen = ({ navigation }) => {
             handleViewReceipt(item.id);
           }}
         >
-          <Icon name="receipt" size={16} color="#FF6B35" />
+          <Icon name="receipt" size={16} color="#079b59" />
           <Text style={styles.actionButtonText}>Чек</Text>
         </TouchableOpacity>
       </View>
@@ -322,7 +325,7 @@ const OrderHistoryScreen = ({ navigation }) => {
           <Text style={styles.title}>История заказов</Text>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF6B35" />
+          <ActivityIndicator size="large" color="#079b59" />
           <Text style={styles.loadingText}>Загрузка заказов...</Text>
         </View>
       </SafeAreaView>
@@ -358,8 +361,8 @@ const OrderHistoryScreen = ({ navigation }) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#FF6B35']}
-            tintColor="#FF6B35"
+            colors={[colors.accent]}
+            tintColor="#079b59"
           />
         }
         onEndReached={loadMoreOrders}
@@ -368,7 +371,7 @@ const OrderHistoryScreen = ({ navigation }) => {
           if (loadingMore) {
             return (
               <View style={styles.loadingMoreContainer}>
-                <ActivityIndicator size="small" color="#FF6B35" />
+                <ActivityIndicator size="small" color="#079b59" />
                 <Text style={styles.footerLoaderText}>Загрузка...</Text>
               </View>
             );
@@ -387,13 +390,13 @@ const OrderHistoryScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.bg,
   },
   header: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingTop: 10,
     paddingBottom: 20,
     paddingHorizontal: 20,
@@ -406,7 +409,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: colors.buttonText,
   },
   listContainer: {
     padding: 15,
@@ -418,12 +421,12 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   orderCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: colors.cardBg,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 12,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -440,12 +443,12 @@ const styles = StyleSheet.create({
   orderNumber: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 4,
   },
   orderDate: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
   },
   statusContainer: {
     alignItems: 'flex-end',
@@ -453,10 +456,10 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 20,
   },
   statusText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -467,11 +470,11 @@ const styles = StyleSheet.create({
   },
   deliveryType: {
     fontSize: 14,
-    color: '#2C3E50',
+    color: colors.text,
   },
   paymentMethod: {
     fontSize: 14,
-    color: '#2C3E50',
+    color: colors.text,
   },
   orderItems: {
     marginBottom: 12,
@@ -479,17 +482,17 @@ const styles = StyleSheet.create({
   itemsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 6,
   },
   itemText: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginBottom: 2,
   },
   moreItems: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
   orderFooter: {
@@ -497,22 +500,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: colors.hoverBg,
     paddingTop: 12,
   },
   totalAmount: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: colors.accent,
   },
   cancelButton: {
-    backgroundColor: '#E74C3C',
+    backgroundColor: colors.error,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
   },
   cancelButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -523,23 +526,23 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 24,
   },
   shopButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   shopButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -552,23 +555,23 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#E74C3C',
+    color: colors.error,
     marginBottom: 8,
   },
   errorText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -581,23 +584,23 @@ const styles = StyleSheet.create({
   authTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 8,
   },
   authText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 24,
   },
   loginButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   loginButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -609,7 +612,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.textMuted,
   },
   orderActions: {
     flexDirection: 'row',
@@ -617,7 +620,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: colors.hoverBg,
   },
   actionButton: {
     flexDirection: 'row',
@@ -625,10 +628,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: '#FFF5F0',
+    backgroundColor: colors.accentRgba,
   },
   actionButtonText: {
-    color: '#FF6B35',
+    color: colors.accent,
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 4,
@@ -640,18 +643,18 @@ const styles = StyleSheet.create({
   footerLoaderText: {
     marginTop: 8,
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.text,
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
     textAlign: 'center',
   },
 });

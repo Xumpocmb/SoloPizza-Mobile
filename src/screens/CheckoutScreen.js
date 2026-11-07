@@ -7,15 +7,19 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
   FlatList,
 } from 'react-native';
+import Alert from '../utils/alertShim';
+import useAppTheme from '../theme/useAppTheme';
+import { num } from '../utils/money';
 import { useDispatch, useSelector } from 'react-redux';
 import { createOrder } from '../store/slices/orderSlice';
 import { clearCart } from '../store/slices/cartSlice';
 import { orderService, cartService, userService } from '../services';
 
 const CheckoutScreen = ({ navigation }) => {
+  const { colors } = useAppTheme();
+  const styles = makeStyles(colors);
   const dispatch = useDispatch();
   const { items, totalAmount } = useSelector((state) => state.cart);
   const { user } = useSelector((state) => state.auth);
@@ -46,7 +50,8 @@ const CheckoutScreen = ({ navigation }) => {
   const [orderComment, setOrderComment] = useState('');
   const [errors, setErrors] = useState({});
 
-  const deliveryFee = deliveryType === 'delivery' ? 5.00 : 0;
+  // Доставка/скидки считаются на сервере (quote_cart появится у друга). Пока не выдумываем цифру.
+  const deliveryFee = 0;
   const finalTotal = totalAmount + deliveryFee;
 
   useEffect(() => {
@@ -187,7 +192,7 @@ const CheckoutScreen = ({ navigation }) => {
 
       const orderData = {
         items: items.map(item => ({
-          product_id: item.product.id,
+          product_id: item.productId ?? item.product?.id,
           quantity: item.quantity,
           size_id: item.size?.id,
           addon_ids: item.addons?.map(addon => addon.id) || [],
@@ -290,7 +295,7 @@ const CheckoutScreen = ({ navigation }) => {
       <View style={styles.itemPricing}>
         <Text style={styles.itemQuantity}>{item.quantity} шт.</Text>
         <Text style={styles.itemPrice}>
-          {(item.price * item.quantity).toFixed(2)} BYN
+          {(num(item.price) * item.quantity).toFixed(2)} BYN
         </Text>
       </View>
     </View>
@@ -358,6 +363,7 @@ const CheckoutScreen = ({ navigation }) => {
                 errors.street && styles.inputError,
               ]}
               placeholder="Название улицы"
+              placeholderTextColor={colors.textMuted}
               value={deliveryAddress.street}
               onChangeText={(value) => handleInputChange('address', 'street', value)}
             />
@@ -374,6 +380,7 @@ const CheckoutScreen = ({ navigation }) => {
                   errors.house && styles.inputError,
                 ]}
                 placeholder="№"
+                placeholderTextColor={colors.textMuted}
                 value={deliveryAddress.house}
                 onChangeText={(value) => handleInputChange('address', 'house', value)}
               />
@@ -386,6 +393,7 @@ const CheckoutScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="№"
+                placeholderTextColor={colors.textMuted}
                 value={deliveryAddress.apartment}
                 onChangeText={(value) => handleInputChange('address', 'apartment', value)}
               />
@@ -397,6 +405,7 @@ const CheckoutScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="№"
+                placeholderTextColor={colors.textMuted}
                 value={deliveryAddress.entrance}
                 onChangeText={(value) => handleInputChange('address', 'entrance', value)}
               />
@@ -406,6 +415,7 @@ const CheckoutScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="№"
+                placeholderTextColor={colors.textMuted}
                 value={deliveryAddress.floor}
                 onChangeText={(value) => handleInputChange('address', 'floor', value)}
               />
@@ -416,6 +426,7 @@ const CheckoutScreen = ({ navigation }) => {
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Дополнительная информация для курьера"
+              placeholderTextColor={colors.textMuted}
               value={deliveryAddress.comment}
               onChangeText={(value) => handleInputChange('address', 'comment', value)}
               multiline
@@ -436,6 +447,7 @@ const CheckoutScreen = ({ navigation }) => {
               errors.name && styles.inputError,
             ]}
             placeholder="Ваше имя"
+            placeholderTextColor={colors.textMuted}
             value={contactInfo.name}
             onChangeText={(value) => handleInputChange('contact', 'name', value)}
           />
@@ -451,6 +463,7 @@ const CheckoutScreen = ({ navigation }) => {
               errors.phone && styles.inputError,
             ]}
             placeholder="+375 (XX) XXX-XX-XX"
+            placeholderTextColor={colors.textMuted}
             value={contactInfo.phone}
             onChangeText={(value) => handleInputChange('contact', 'phone', value)}
             keyboardType="phone-pad"
@@ -464,6 +477,7 @@ const CheckoutScreen = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder="your@email.com"
+            placeholderTextColor={colors.textMuted}
             value={contactInfo.email}
             onChangeText={(value) => handleInputChange('contact', 'email', value)}
             keyboardType="email-address"
@@ -517,6 +531,7 @@ const CheckoutScreen = ({ navigation }) => {
         <TextInput
           style={[styles.input, styles.textArea]}
           placeholder="Дополнительные пожелания к заказу"
+          placeholderTextColor={colors.textMuted}
           value={orderComment}
           onChangeText={setOrderComment}
           multiline
@@ -539,18 +554,18 @@ const CheckoutScreen = ({ navigation }) => {
       <View style={styles.summarySection}>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Сумма заказа:</Text>
-          <Text style={styles.summaryValue}>{totalAmount.toFixed(2)} BYN</Text>
+          <Text style={styles.summaryValue}>{num(totalAmount).toFixed(2)} BYN</Text>
         </View>
         {deliveryType === 'delivery' && (
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Доставка:</Text>
-            <Text style={styles.summaryValue}>{deliveryFee.toFixed(2)} BYN</Text>
+            <Text style={styles.summaryValue}>{num(deliveryFee).toFixed(2)} BYN</Text>
           </View>
         )}
         <View style={styles.summaryDivider} />
         <View style={styles.summaryRow}>
           <Text style={styles.totalLabel}>Итого к оплате:</Text>
-          <Text style={styles.totalValue}>{finalTotal.toFixed(2)} BYN</Text>
+          <Text style={styles.totalValue}>{num(finalTotal).toFixed(2)} BYN</Text>
         </View>
       </View>
 
@@ -568,7 +583,7 @@ const CheckoutScreen = ({ navigation }) => {
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <Text style={styles.orderButtonText}>
-              Оформить заказ на {finalTotal.toFixed(2)} BYN
+              Оформить заказ на {num(finalTotal).toFixed(2)} BYN
             </Text>
           )}
         </TouchableOpacity>
@@ -577,13 +592,13 @@ const CheckoutScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.bg,
   },
   header: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingTop: 50,
     paddingBottom: 20,
     paddingHorizontal: 20,
@@ -592,17 +607,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: colors.buttonText,
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     marginTop: 10,
     padding: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 15,
   },
   optionsContainer: {
@@ -611,26 +626,26 @@ const styles = StyleSheet.create({
   },
   optionButton: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.bg,
     paddingVertical: 15,
     paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E1E8ED',
+    borderColor: colors.divider,
     alignItems: 'center',
   },
   optionButtonActive: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   optionText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#2C3E50',
+    color: colors.text,
     textAlign: 'center',
   },
   optionTextActive: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
   },
   inputContainer: {
     marginBottom: 15,
@@ -645,27 +660,28 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#F8F9FA',
+    color: colors.text,
+    backgroundColor: colors.bg,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E1E8ED',
+    borderColor: colors.divider,
   },
   inputError: {
-    borderColor: '#E74C3C',
+    borderColor: colors.error,
   },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
   },
   errorText: {
-    color: '#E74C3C',
+    color: colors.error,
     fontSize: 14,
     marginTop: 5,
   },
@@ -675,7 +691,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.hoverBg,
   },
   itemInfo: {
     flex: 1,
@@ -684,12 +700,12 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#2C3E50',
+    color: colors.text,
     marginBottom: 4,
   },
   itemOption: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginBottom: 2,
   },
   itemPricing: {
@@ -697,16 +713,16 @@ const styles = StyleSheet.create({
   },
   itemQuantity: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginBottom: 2,
   },
   itemPrice: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: colors.accent,
   },
   summarySection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     marginTop: 10,
     padding: 20,
   },
@@ -718,50 +734,50 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 16,
-    color: '#2C3E50',
+    color: colors.text,
   },
   summaryValue: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#2C3E50',
+    color: colors.text,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: '#E1E8ED',
+    backgroundColor: colors.divider,
     marginVertical: 10,
   },
   totalLabel: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.text,
   },
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: colors.accent,
   },
   bottomSection: {
     padding: 20,
     paddingBottom: 40,
   },
   orderButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 20,
     alignItems: 'center',
     elevation: 2,
-    shadowColor: '#FF6B35',
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
   orderButtonDisabled: {
-    backgroundColor: '#BDC3C7',
+    backgroundColor: colors.divider,
     elevation: 0,
     shadowOpacity: 0,
   },
   orderButtonText: {
-    color: '#FFFFFF',
+    color: colors.buttonText,
     fontSize: 18,
     fontWeight: 'bold',
   },
