@@ -204,6 +204,19 @@ class AuthService {
   }
 
   /**
+   * Только для разработки (экран входа, __DEV__): вход тестовым refresh-токеном,
+   * выпущенным на сервере, пока нет входа через Google/Apple. Сервер ротирует токен —
+   * присланный становится недействительным, в хранилище кладётся новый.
+   */
+  async loginWithRefreshToken(refresh) {
+    const tokens = await apiService.post(API_ENDPOINTS.AUTH.TOKEN_REFRESH, { refresh });
+    await this.storeTokens(tokens.access, tokens.refresh);
+    const me = await apiService.get(API_ENDPOINTS.ME);
+    await this.storeUserData(me);
+    return me;
+  }
+
+  /**
    * Запросить письмо для восстановления пароля.
    * LoginScreen → handleForgotPassword().
    * @param {{email: string}} data

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL, DEFAULT_HEADERS, REQUEST_TIMEOUT } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS, DEFAULT_HEADERS, REQUEST_TIMEOUT } from '../config/api';
 
 class ApiService {
   constructor() {
@@ -76,7 +76,7 @@ class ApiService {
         throw new Error('No refresh token available');
       }
 
-      const response = await this.makeRequest('/auth/token/refresh/', {
+      const response = await this.makeRequest(API_ENDPOINTS.AUTH.TOKEN_REFRESH, {
         method: 'POST',
         body: JSON.stringify({ refresh: refreshToken }),
         headers: DEFAULT_HEADERS,
@@ -84,6 +84,8 @@ class ApiService {
 
       if (response.access) {
         await this.setAuthToken(response.access);
+        // сервер ротирует refresh: старый уже в чёрном списке, без нового следующий вход не продлится
+        if (response.refresh) await this.setRefreshToken(response.refresh);
         return response.access;
       }
       
@@ -134,7 +136,7 @@ class ApiService {
       const response = await send(requestOptions);
 
       // Handle 401 Unauthorized - try to refresh token
-      if (response.status === 401 && endpoint !== '/auth/token/refresh/') {
+      if (response.status === 401 && endpoint !== API_ENDPOINTS.AUTH.TOKEN_REFRESH) {
         try {
           await this.refreshAccessToken();
           // Retry the original request with new token

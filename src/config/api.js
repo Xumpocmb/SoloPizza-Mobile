@@ -53,7 +53,8 @@ export const API_ENDPOINTS = {
     LOGIN: '/auth/login/',
     REGISTER: '/auth/register/',
     TOKEN_OBTAIN: '/auth/token/',
-    TOKEN_REFRESH: '/auth/token/refresh/',
+    // app_api (Xumpocmb/SoloPizza#2): ротация — в ответе новый refresh, старый уходит в чёрный список
+    TOKEN_REFRESH: '/auth/refresh/',
     TOKEN_VERIFY: '/auth/token/verify/',
     PROFILE: '/auth/profile/',
   },
