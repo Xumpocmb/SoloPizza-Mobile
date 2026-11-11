@@ -34,6 +34,7 @@ import OrderDetailScreen from '../screens/OrderDetailScreen';
 import VacancyListScreen from '../screens/VacancyListScreen';
 import VacancyDetailScreen from '../screens/VacancyDetailScreen';
 import VacancyApplyScreen from '../screens/VacancyApplyScreen';
+import ContactsScreen from '../screens/ContactsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -185,6 +186,11 @@ export default function AppNavigator() {
           name="VacancyApply" 
           component={VacancyApplyScreen} 
           options={{ title: 'Отклик на вакансию' }}
+        />
+        <Stack.Screen
+          name="Contacts"
+          component={ContactsScreen}
+          options={{ title: 'Контакты' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

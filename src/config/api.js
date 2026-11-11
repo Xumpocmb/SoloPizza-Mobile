@@ -62,6 +62,8 @@ export const API_ENDPOINTS = {
   CATALOG: {
     META: '/meta/',
     BRANCHES: '/branches/',
+    CONTACTS: '/contacts/',
+    ANNOUNCEMENTS: '/announcements/',
     CATEGORIES: '/categories/',
     CATEGORY_DETAIL: (slug) => `/categories/${slug}/`,
     PRODUCTS: '/products/',

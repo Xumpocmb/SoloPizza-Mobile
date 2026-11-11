@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
-  Linking,
 } from 'react-native';
 import Alert from '../utils/alertShim';
 import useAppTheme from '../theme/useAppTheme';
@@ -113,8 +112,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
   };
 
   const handleCallSupport = () => {
-    const phoneNumber = '+375291234567';
-    Linking.openURL(`tel:${phoneNumber}`);
+    navigation.navigate('Contacts');
   };
 
   const getStatusColor = (status) => {

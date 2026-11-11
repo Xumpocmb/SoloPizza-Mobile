@@ -178,14 +178,9 @@ const ProfileScreen = ({ navigation }) => {
       },
     },
     {
-      title: 'Поддержка',
-      icon: '❓',
-      onPress: () => {
-        Alert.alert(
-          'Поддержка',
-          'Свяжитесь с нами:\n\nТелефон: +375 (29) 123-45-67\nEmail: support@solopizza.by\n\nРежим работы: 10:00 - 23:00'
-        );
-      },
+      title: 'Контакты',
+      icon: '📞',
+      onPress: () => navigation.navigate('Contacts'),
     },
     {
       title: 'О приложении',
@@ -221,6 +216,12 @@ const ProfileScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('Register')}
           >
             <Text style={styles.registerButtonText}>Зарегистрироваться</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.registerButton}
+            onPress={() => navigation.navigate('Contacts')}
+          >
+            <Text style={styles.registerButtonText}>Контакты</Text>
           </TouchableOpacity>
         </View>
       </View>
