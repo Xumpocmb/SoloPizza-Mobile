@@ -213,7 +213,6 @@ const CatalogScreen = ({ navigation }) => {
           placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholderTextColor={colors.textMuted}
         />
       </View>
 

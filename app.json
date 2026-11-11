@@ -1,9 +1,28 @@
 {
-  "name": "SoloPizzaMobileApp",
-  "displayName": "SoloPizzaMobileApp",
-  "extra": {
-    "eas": {
-      "projectId": "73a74e7e-e527-46f5-8e91-d6f206c4ce73"
+  "expo": {
+    "name": "Solo Pizza",
+    "slug": "SoloPizzaMobileApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "by.solopizza.app",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "by.solopizza.app",
+      "allowBackup": false
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "@react-native-vector-icons/material-icons"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "73a74e7e-e527-46f5-8e91-d6f206c4ce73"
+      }
     }
   }
 }

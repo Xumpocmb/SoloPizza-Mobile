@@ -16,7 +16,7 @@ import { loadCart } from './src/store/slices/cartSlice';
  * показываем splash (иначе навигатор мигнёт экраном входа).
  */
 function Bootstrap() {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<typeof store.dispatch>();
 
   useEffect(() => {
     dispatch(loadStoredTokens());

@@ -2,9 +2,8 @@
  * @format
  */
 
-import { AppRegistry } from 'react-native';
+import { registerRootComponent } from 'expo';
 import App from './App';
-import { name as appName } from './app.json';
 import { USE_DEMO_FALLBACK } from './src/config/api';
 
 // В демо-режиме (API ещё не задеплоен) ожидаемые сбои запросов не зажигают
@@ -28,4 +27,5 @@ if (__DEV__) {
   };
 }
 
-AppRegistry.registerComponent(appName, () => App);
+// Один вход для телефона и веба: Expo сам регистрирует корневой компонент.
+registerRootComponent(App);
