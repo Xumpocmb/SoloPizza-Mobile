@@ -15,7 +15,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { catalogService } from '../../services';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { clearCart } from './cartSlice';
+import { changeCartBranch } from './cartSlice';
 
 const BRANCH_STORAGE_KEY = 'branch_id';
 
@@ -146,7 +146,7 @@ export const selectBranch = createAsyncThunk(
       return rejectWithValue('Не указан идентификатор филиала');
     }
     if (catalogService.getBranchId() !== branchId) {
-      await dispatch(clearCart());
+      await dispatch(changeCartBranch(branchId));
     }
     catalogService.setBranchId(branchId);
     try {

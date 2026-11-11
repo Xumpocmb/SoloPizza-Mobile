@@ -78,7 +78,15 @@ export const API_ENDPOINTS = {
     WEEKLY_SPECIAL: '/products/weekly-special/',
   },
 
-  // Корзина и заказы приложения появятся в app_api — см. PLAN-orders-auth.md
+  // Корзина приложения на сервере (app_api, Xumpocmb/SoloPizza#1): гостю — по X-Cart-Token,
+  // после входа — по JWT. Цены и проверки опций — только на сервере.
+  CART: {
+    ROOT: '/cart/',
+    ITEMS: '/cart/items/',
+    ITEM: (id) => `/cart/items/${id}/`,
+    BRANCH: '/cart/branch/',
+  },
+
   ORDERS: {
     LIST: '/orders/',
     DETAIL: (id) => `/orders/${id}/`,

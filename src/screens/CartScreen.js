@@ -24,6 +24,7 @@ import {
   updateCartItemQuantity,
   removeFromCart,
   clearCart,
+  loadCart as fetchServerCart,
 } from '../store/slices/cartSlice';
 
 const CartScreen = ({ navigation }) => {
@@ -37,14 +38,18 @@ const CartScreen = ({ navigation }) => {
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
   const [loading, setLoading] = useState(true);
-  const cartItems = items; // единственный источник — redux cartSlice (persist в AsyncStorage)
+  const cartItems = items; // последний ответ сервера (/api/v1/cart/), см. cartSlice
   const [cartSummary, setCartSummary] = useState({ total: 0, discount: 0, delivery: 0 });
   const [updating, setUpdating] = useState(false);
 
   const loadCart = async () => {
-    // Корзина локальная (redux + AsyncStorage): в app_api друга эндпоинтов
-    // корзины нет, серверные вызовы давали 404 и красные тосты LogBox.
-    setLoading(false);
+    try {
+      await dispatch(fetchServerCart()).unwrap();
+    } catch (message) {
+      Alert.alert('Корзина', String(message));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const calculateTotal = () => {
@@ -80,8 +85,8 @@ const CartScreen = ({ navigation }) => {
     try {
       setUpdating(true);
       await dispatch(updateCartItemQuantity({ itemId, quantity: newQuantity })).unwrap();
-    } catch (error) {
-      // обновление количества — локальная операция, сюрпризов не ждём
+    } catch (message) {
+      Alert.alert('Не удалось изменить количество', String(message));
     } finally {
       setUpdating(false);
     }
@@ -108,8 +113,8 @@ const CartScreen = ({ navigation }) => {
             try {
               setUpdating(true);
               await dispatch(removeFromCart(itemId)).unwrap();
-            } catch (error) {
-              // удаление локальное, сюрпризов не ждём
+            } catch (message) {
+              Alert.alert('Не удалось удалить', String(message));
             } finally {
               setUpdating(false);
             }
@@ -217,10 +222,7 @@ const CartScreen = ({ navigation }) => {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    // Имитируем обновление
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    loadCart().finally(() => setRefreshing(false));
   };
 
   const renderCartItem = ({ item }) => {
@@ -264,7 +266,7 @@ const CartScreen = ({ navigation }) => {
           <TouchableOpacity
             style={[styles.quantityButton, updating && styles.quantityButtonDisabled]}
             onPress={() => updateQuantity(item.id, item.quantity + 1)}
-            disabled={updating}
+            disabled={updating || item.quantity >= 10 /* сервер принимает 1–10 */}
           >
             <Text style={styles.quantityButtonText}>+</Text>
           </TouchableOpacity>
