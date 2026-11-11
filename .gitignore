@@ -1,82 +1,41 @@
-# OSX
-#
-.DS_Store
-
-# Xcode
-#
-build/
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-!default.mode1v3
-*.mode2v3
-!default.mode2v3
-*.perspectivev3
-!default.perspectivev3
-xcuserdata
-*.xccheckout
-*.moved-aside
-DerivedData
-*.hmap
-*.ipa
-*.xcuserstate
-**/.xcode.env.local
-
-# Android/IntelliJ
-#
-build/
-.idea
-.gradle
-local.properties
-*.iml
-*.hprof
-.cxx/
-*.keystore
-!debug.keystore
-.kotlin/
-
-# node.js
-#
+# Зависимости
 node_modules/
-npm-debug.log
-yarn-error.log
 
-# fastlane
-#
-# It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the
-# screenshots whenever they are needed.
-# For more information about the recommended setup visit:
-# https://docs.fastlane.tools/best-practices/source-control/
+# Expo: android/ и ios/ генерирует `expo prebuild` (EAS делает это сам)
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+/android
+/ios
 
-**/fastlane/report.xml
-**/fastlane/Preview.html
-**/fastlane/screenshots
-**/fastlane/test_output
+# Ключи и сертификаты подписи — никогда не в git (EAS хранит их сам)
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+credentials.json
+credentials/
 
-# Bundle artifact
-*.jsbundle
+# Собранные приложения (скачанные из EAS)
+*.apk
+*.aab
+*.ipa
 
-# Ruby / CocoaPods
-**/Pods/
-/vendor/bundle/
+# Переменные окружения
+.env*.local
 
-# Temporary files created by Metro to check the health of the file watcher
+# Metro, отладка, тесты
 .metro-health-check*
-
-# testing
+*.tsbuildinfo
+npm-debug.*
+yarn-debug.*
+yarn-error.*
 /coverage
 
-# Yarn
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
-web-dist/
-
-# Expo: android/ и ios/ генерируются `expo prebuild` (EAS делает это сам)
-.expo/
-android/
-ios/
-dist/
+# Системные
+.DS_Store
+Thumbs.db
