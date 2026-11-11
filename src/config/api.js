@@ -24,6 +24,10 @@ export const API_BASE_URL =
 // Когда страховка станет не нужна — поставить false и удалить demoCatalog.js.
 export const USE_DEMO_FALLBACK = true;
 
+// Политика обработки персональных данных на сайте: ссылка у галочек согласия
+// и в магазинах приложений
+export const PRIVACY_URL = 'https://solo-pizza.by/privacy/';
+
 // ПРОМО/АКЦИИ. На 02.11.2026 эндпоинта акций на бэкенде НЕТ (путь /promo/active/
 // отдавал 404). Согласованный путь будущего эндпоинта — '/promos/active/'
 // (спека app_api v2: spec-app-api-v2-orders-cart-auth.md в репо памяти).
