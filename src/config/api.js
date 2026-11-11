@@ -87,24 +87,17 @@ export const API_ENDPOINTS = {
     BRANCH: '/cart/branch/',
   },
 
+  // Оформление и заказы (app_api, Xumpocmb/SoloPizza#3) — только после входа (JWT)
+  CHECKOUT: {
+    OPTIONS: '/checkout/options/',
+    QUOTE: '/checkout/quote/',
+  },
   ORDERS: {
     LIST: '/orders/',
     DETAIL: (id) => `/orders/${id}/`,
-    CREATE: '/orders/create/',
-    CANCEL: (id) => `/orders/${id}/cancel/`,
-    STATUS: (id) => `/orders/${id}/status/`,
-    STATUSES: '/orders/statuses/',
-    TRACK: (id) => `/orders/${id}/track/`,
-    REPEAT: (id) => `/orders/${id}/repeat/`,
-    RATE: (id) => `/orders/${id}/rate/`,
-    RECEIPT: (id) => `/orders/${id}/receipt/`,
-    VALIDATE: '/orders/validate/',
-    DELIVERY_OPTIONS: '/orders/delivery-options/',
-    DELIVERY_COST: '/orders/delivery-cost/',
-    DELIVERY_TIME: '/orders/delivery-time/',
-    PAYMENT_METHODS: '/orders/payment-methods/',
-    PAYMENT: '/orders/payment/',
   },
+  // Профиль вошедшего пользователя (Xumpocmb/SoloPizza#2)
+  ME: '/me/',
 
   // v1.1 (вечер 02.11.2026): вакансии и отклики, филиалонезависимы
   VACANCIES: {

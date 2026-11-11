@@ -4,6 +4,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import cartService, { EMPTY_CART } from '../../services/cartService';
 import { num } from '../../utils/money';
+import { apiErrorMessage } from '../../utils/apiError';
 import { optionLabel, variantLabel } from '../../utils/productOptions';
 
 const option = (item) => (item ? { ...item, name: optionLabel(item.name), price: num(item.price) } : null);
@@ -24,14 +25,7 @@ export const fromServerLine = (line) => ({
   drink: line.drink ? { name: line.drink } : null,
 });
 
-const errorMessage = (error) => {
-  const data = error?.data;
-  if (data && typeof data === 'object') {
-    const first = Object.values(data).flat()[0];
-    if (typeof first === 'string') return first;
-  }
-  return error?.message || 'Не удалось обновить корзину';
-};
+const errorMessage = (error) => apiErrorMessage(error, 'Не удалось обновить корзину');
 
 const cartThunk = (type, run) =>
   createAsyncThunk(type, async (arg, { rejectWithValue }) => {

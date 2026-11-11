@@ -1,7 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
 import cartReducer from './slices/cartSlice';
-import orderReducer from './slices/orderSlice';
 import productsReducer from './slices/productSlice';
 
 export const store = configureStore({
@@ -9,7 +8,6 @@ export const store = configureStore({
     auth: authReducer,
     products: productsReducer, // ← ДОБАВЛЕНО: экраны читают state.products
     cart: cartReducer,
-    order: orderReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

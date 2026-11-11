@@ -1,786 +1,326 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * Оформление заказа из серверной корзины (Xumpocmb/SoloPizza#3).
+ * Итог со скидками и доставкой считает сервер (/checkout/quote/); приложение
+ * присылает только контакты и выбор способов. Только после входа.
+ */
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
   ActivityIndicator,
-  FlatList,
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { useDispatch } from 'react-redux';
 import Alert from '../utils/alertShim';
 import useAppTheme from '../theme/useAppTheme';
+import { apiService, orderService } from '../services';
+import { newClientOrderId } from '../services/orderService';
+import { loadCart } from '../store/slices/cartSlice';
+import { PRIVACY_URL } from '../config/api';
 import { num } from '../utils/money';
-import { useDispatch, useSelector } from 'react-redux';
-import { createOrder } from '../store/slices/orderSlice';
-import { clearCart } from '../store/slices/cartSlice';
-import { orderService, userService } from '../services';
+import { apiErrorMessage, apiFieldErrors } from '../utils/apiError';
 
-const CheckoutScreen = ({ navigation }) => {
+const money = (value) => `${num(value).toFixed(2)} BYN`;
+
+export default function CheckoutScreen({ navigation }) {
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
-  const { items, totalAmount } = useSelector((state) => state.cart);
-  const { user } = useSelector((state) => state.auth);
-  const { isLoading } = useSelector((state) => state.order);
-  
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [deliveryOptions, setDeliveryOptions] = useState([]);
-  const [paymentMethods, setPaymentMethods] = useState([]);
-  const [userProfile, setUserProfile] = useState(null);
-  const [savedAddresses, setSavedAddresses] = useState([]);
 
-  const [deliveryType, setDeliveryType] = useState('delivery'); // 'delivery' или 'pickup'
-  const [paymentMethod, setPaymentMethod] = useState('cash'); // 'cash' или 'card'
-  const [deliveryAddress, setDeliveryAddress] = useState({
-    street: '',
-    house: '',
-    apartment: '',
-    entrance: '',
-    floor: '',
-    comment: '',
-  });
-  const [contactInfo, setContactInfo] = useState({
-    name: user?.first_name + ' ' + user?.last_name || '',
-    phone: user?.phone || '',
-    email: user?.email || '',
-  });
-  const [orderComment, setOrderComment] = useState('');
+  const [authed, setAuthed] = useState(null); // null — ещё проверяем
+  const [options, setOptions] = useState(null);
+  const [deliveryType, setDeliveryType] = useState('pickup');
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [quote, setQuote] = useState(null);
+  const [form, setForm] = useState({ customer_name: '', phone: '', address: '', comment: '' });
+  const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState({});
+  const [sending, setSending] = useState(false);
+  // один id на попытку оформления: повтор после обрыва сети вернёт тот же заказ
+  const clientOrderId = useRef(newClientOrderId());
 
-  // Доставка/скидки считаются на сервере (quote_cart появится у друга). Пока не выдумываем цифру.
-  const deliveryFee = 0;
-  const finalTotal = totalAmount + deliveryFee;
-
-  const loadCheckoutData = async () => {
-    try {
-      setLoading(true);
-      const [deliveryOpts, paymentOpts] = await Promise.all([
-        orderService.getDeliveryOptions(),
-        orderService.getPaymentMethods(),
-      ]);
-      
-      setDeliveryOptions(deliveryOpts || []);
-      setPaymentMethods(paymentOpts || []);
-    } catch (error) {
-      console.error('Error loading checkout data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadUserData = async () => {
-    try {
-      const [profile, addresses] = await Promise.all([
-        userService.getProfile(),
-        userService.getAddresses(),
-      ]);
-      
-      setUserProfile(profile);
-      setSavedAddresses(addresses || []);
-      
-      // Pre-fill contact info from profile
-      if (profile) {
-        setContactInfo(prev => ({
-          ...prev,
-          name: profile.first_name && profile.last_name 
-            ? `${profile.first_name} ${profile.last_name}` 
-            : prev.name,
-          phone: profile.phone || prev.phone,
-          email: profile.email || prev.email,
-        }));
-      }
-      
-      // Set default address if available
-      const defaultAddress = addresses?.find(addr => addr.is_default);
-      if (defaultAddress && deliveryType === 'delivery') {
-        setDeliveryAddress(prev => ({
-          ...prev,
-          street: defaultAddress.street || '',
-          house: defaultAddress.house || '',
-          apartment: defaultAddress.apartment || '',
-          entrance: defaultAddress.entrance || '',
-          floor: defaultAddress.floor || '',
-          comment: defaultAddress.comment || '',
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading user data:', error);
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    // Валидация контактной информации
-    if (!contactInfo.name.trim()) {
-      newErrors.name = 'Имя обязательно';
-    }
-    if (!contactInfo.phone.trim()) {
-      newErrors.phone = 'Телефон обязателен';
-    } else if (!/^\+?[1-9]\d{1,14}$/.test(contactInfo.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Неверный формат телефона';
-    }
-
-    // Валидация адреса доставки (только для доставки)
-    if (deliveryType === 'delivery') {
-      if (!deliveryAddress.street.trim()) {
-        newErrors.street = 'Улица обязательна';
-      }
-      if (!deliveryAddress.house.trim()) {
-        newErrors.house = 'Номер дома обязателен';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleInputChange = (section, field, value) => {
-    if (section === 'contact') {
-      setContactInfo(prev => ({ ...prev, [field]: value }));
-    } else if (section === 'address') {
-      setDeliveryAddress(prev => ({ ...prev, [field]: value }));
-    }
-    
-    // Очищаем ошибку для поля при вводе
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: null }));
-    }
-  };
-
-  const handleCreateOrder = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      
-      // Validate order before creating
-      const validation = await orderService.validateOrder({
-        delivery_type: deliveryType,
-        payment_method: paymentMethod,
-        address: deliveryType === 'delivery' ? deliveryAddress : null,
-        customer_info: contactInfo,
-      });
-      
-      if (!validation.valid) {
-        Alert.alert('Ошибка', validation.message || 'Проверьте данные заказа');
+  useEffect(() => {
+    apiService.getAuthToken().then(async (token) => {
+      if (!token) {
+        setAuthed(false);
         return;
       }
+      try {
+        const [checkout, me] = await Promise.all([orderService.getCheckoutOptions(), orderService.getMe()]);
+        setOptions(checkout);
+        setForm((prev) => ({
+          ...prev,
+          customer_name: prev.customer_name || [me.first_name, me.last_name].filter(Boolean).join(' '),
+          phone: prev.phone || me.phone || '',
+        }));
+        setAuthed(true);
+      } catch (error) {
+        setAuthed(error?.status !== 401);
+        if (error?.status !== 401) Alert.alert('Оформление', apiErrorMessage(error));
+      }
+    });
+  }, []);
 
-      const orderData = {
-        items: items.map(item => ({
-          product_id: item.productId ?? item.product?.id,
-          quantity: item.quantity,
-          size_id: item.size?.id,
-          addon_ids: item.addons?.map(addon => addon.id) || [],
-          price: item.price,
-        })),
+  useEffect(() => {
+    if (!authed) return;
+    orderService
+      .quote(deliveryType)
+      .then(setQuote)
+      .catch((error) => Alert.alert('Не удалось посчитать итог', apiErrorMessage(error)));
+  }, [authed, deliveryType]);
+
+  const setField = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: null }));
+  };
+
+  const submit = async () => {
+    const local = {};
+    if (!form.customer_name.trim()) local.customer_name = 'Укажите имя';
+    if (!form.phone.trim()) local.phone = 'Укажите телефон';
+    if (deliveryType === 'delivery' && !form.address.trim()) local.address = 'Укажите адрес доставки';
+    if (!consent) local.consent = 'Нужно согласие на обработку персональных данных';
+    if (Object.keys(local).length > 0) {
+      setErrors(local);
+      return;
+    }
+    setSending(true);
+    try {
+      const order = await orderService.createOrder({
+        client_order_id: clientOrderId.current,
         delivery_type: deliveryType,
         payment_method: paymentMethod,
-        contact_name: contactInfo.name.trim(),
-        contact_phone: contactInfo.phone.trim(),
-        contact_email: contactInfo.email.trim(),
-        delivery_address: deliveryType === 'delivery' ? {
-          street: deliveryAddress.street.trim(),
-          house: deliveryAddress.house.trim(),
-          apartment: deliveryAddress.apartment.trim(),
-          entrance: deliveryAddress.entrance.trim(),
-          floor: deliveryAddress.floor.trim(),
-          comment: deliveryAddress.comment.trim(),
-        } : null,
-        comment: orderComment.trim(),
-        total_amount: finalTotal,
-      };
-
-      const result = await dispatch(createOrder(orderData)).unwrap();
-      
-      // Process payment if needed
-      if (paymentMethod === 'card') {
-        const paymentResult = await orderService.processPayment(result.id, {
-          method: 'card',
-          amount: finalTotal,
-        });
-        
-        if (!paymentResult.success) {
-          Alert.alert('Ошибка оплаты', paymentResult.message || 'Не удалось обработать платеж');
-          return;
-        }
-      }
-      
-      // Очищаем корзину после успешного создания заказа
-      dispatch(clearCart());
-      
-      Alert.alert(
-        'Заказ оформлен!',
-        `Ваш заказ №${result.order_number || result.id} принят в обработку. Ожидаемое время ${deliveryType === 'delivery' ? 'доставки' : 'готовности'}: ${result.estimated_time || '30-45'} минут.`,
-        [
-          {
-            text: 'Отслеживать заказ',
-            onPress: () => navigation.navigate('OrderDetail', { orderId: result.id }),
-          },
-          {
-            text: 'Перейти к заказам',
-            onPress: () => navigation.navigate('OrderHistory'),
-          },
-          {
-            text: 'На главную',
-            onPress: () => navigation.navigate('Home'),
-          },
-        ]
-      );
+        customer_name: form.customer_name.trim(),
+        phone: form.phone.trim(),
+        address: deliveryType === 'delivery' ? form.address.trim() : '',
+        comment: form.comment.trim(),
+        consent: true,
+      });
+      clientOrderId.current = newClientOrderId();
+      dispatch(loadCart()); // сервер очистил корзину после заказа
+      navigation.replace('OrderDetail', { orderId: order.id, justCreated: true });
     } catch (error) {
-      console.error('Error placing order:', error);
-      
-      let errorMessage = 'Не удалось оформить заказ. Попробуйте еще раз.';
-      
-      if (error.response?.status === 400) {
-        const errorData = error.response.data;
-        if (errorData.detail) {
-          errorMessage = errorData.detail;
-        } else if (errorData.items) {
-          errorMessage = 'Проверьте товары в корзине';
-        } else if (errorData.delivery_address) {
-          errorMessage = 'Проверьте адрес доставки';
-        }
-      } else if (error.response?.status === 402) {
-        errorMessage = 'Недостаточно средств для оплаты заказа';
-      } else if (error.response?.status === 409) {
-        errorMessage = 'Некоторые товары недоступны. Обновите корзину.';
+      const fields = apiFieldErrors(error);
+      const formFields = fields && Object.keys(fields).filter((key) => key in form || key === 'consent');
+      if (formFields?.length) {
+        setErrors(fields);
+      } else {
+        // закрыт филиал, пустая корзина, товар пропал из меню — сервер объясняет сам
+        Alert.alert('Не удалось оформить заказ', apiErrorMessage(error));
       }
-      
-      Alert.alert('Ошибка оформления заказа', errorMessage);
     } finally {
-      setSubmitting(false);
+      setSending(false);
     }
   };
 
-  const renderOrderItem = ({ item }) => (
-    <View style={styles.orderItem}>
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemName} numberOfLines={1}>
-          {item.product?.name}
-        </Text>
-        {item.size && (
-          <Text style={styles.itemOption}>Размер: {item.size.name}</Text>
-        )}
-        {item.addons && item.addons.length > 0 && (
-          <Text style={styles.itemOption}>
-            Добавки: {item.addons.map(addon => addon.name).join(', ')}
-          </Text>
-        )}
+  if (authed === null) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
-      <View style={styles.itemPricing}>
-        <Text style={styles.itemQuantity}>{item.quantity} шт.</Text>
-        <Text style={styles.itemPrice}>
-          {(num(item.price) * item.quantity).toFixed(2)} BYN
-        </Text>
+    );
+  }
+
+  if (!authed) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.title}>Войдите, чтобы оформить заказ</Text>
+        <Text style={styles.muted}>Корзина сохранится и перейдёт в ваш аккаунт</Text>
+        <TouchableOpacity style={styles.submit} onPress={() => navigation.navigate('Login')}>
+          <Text style={styles.submitText}>Войти</Text>
+        </TouchableOpacity>
       </View>
+    );
+  }
+
+  const empty = quote && quote.lines.length === 0;
+  const blocked = options && !options.available;
+
+  const chips = (items, value, onChange) => (
+    <View style={styles.chips}>
+      {items.map((item) => (
+        <TouchableOpacity
+          key={item.id}
+          style={[styles.chip, value === item.id && styles.chipActive]}
+          onPress={() => onChange(item.id)}
+          accessibilityRole="radio"
+          accessibilityState={{ checked: value === item.id }}
+        >
+          <Text style={[styles.chipText, value === item.id && styles.chipTextActive]}>{item.name}</Text>
+        </TouchableOpacity>
+      ))}
     </View>
   );
 
-  useEffect(() => {
-    loadCheckoutData();
-    loadUserData();
-    
-    if (items.length === 0) {
-      Alert.alert(
-        'Пустая корзина',
-        'Корзина пуста. Добавьте товары для оформления заказа.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Catalog'),
-          },
-        ]
-      );
-    }
-  }, [items, navigation]);
-
-  if (items.length === 0) {
-    return null; // Компонент не рендерится, если корзина пуста
-  }
+  const field = (key, label, props = {}) => (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        style={[styles.input, errors[key] && styles.inputError]}
+        value={form[key]}
+        onChangeText={(text) => setField(key, text)}
+        placeholderTextColor={colors.textMuted}
+        editable={!sending}
+        {...props}
+      />
+      {errors[key] ? <Text style={styles.error}>{errors[key]}</Text> : null}
+    </View>
+  );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Заголовок */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Оформление заказа</Text>
-      </View>
-
-      {/* Тип получения заказа */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Способ получения</Text>
-        <View style={styles.optionsContainer}>
-          <TouchableOpacity
-            style={[
-              styles.optionButton,
-              deliveryType === 'delivery' && styles.optionButtonActive,
-            ]}
-            onPress={() => setDeliveryType('delivery')}
-          >
-            <Text
-              style={[
-                styles.optionText,
-                deliveryType === 'delivery' && styles.optionTextActive,
-              ]}
-            >
-              🚚 Доставка (+5.00 BYN)
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.optionButton,
-              deliveryType === 'pickup' && styles.optionButtonActive,
-            ]}
-            onPress={() => setDeliveryType('pickup')}
-          >
-            <Text
-              style={[
-                styles.optionText,
-                deliveryType === 'pickup' && styles.optionTextActive,
-              ]}
-            >
-              🏪 Самовывоз
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Адрес доставки */}
-      {deliveryType === 'delivery' && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Адрес доставки</Text>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Улица *</Text>
-            <TextInput
-              style={[
-                styles.input,
-                errors.street && styles.inputError,
-              ]}
-              placeholder="Название улицы"
-              placeholderTextColor={colors.textMuted}
-              value={deliveryAddress.street}
-              onChangeText={(value) => handleInputChange('address', 'street', value)}
-            />
-            {errors.street && (
-              <Text style={styles.errorText}>{errors.street}</Text>
-            )}
-          </View>
-          <View style={styles.row}>
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.label}>Дом *</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  errors.house && styles.inputError,
-                ]}
-                placeholder="№"
-                placeholderTextColor={colors.textMuted}
-                value={deliveryAddress.house}
-                onChangeText={(value) => handleInputChange('address', 'house', value)}
-              />
-              {errors.house && (
-                <Text style={styles.errorText}>{errors.house}</Text>
-              )}
-            </View>
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.label}>Квартира</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="№"
-                placeholderTextColor={colors.textMuted}
-                value={deliveryAddress.apartment}
-                onChangeText={(value) => handleInputChange('address', 'apartment', value)}
-              />
-            </View>
-          </View>
-          <View style={styles.row}>
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.label}>Подъезд</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="№"
-                placeholderTextColor={colors.textMuted}
-                value={deliveryAddress.entrance}
-                onChangeText={(value) => handleInputChange('address', 'entrance', value)}
-              />
-            </View>
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.label}>Этаж</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="№"
-                placeholderTextColor={colors.textMuted}
-                value={deliveryAddress.floor}
-                onChangeText={(value) => handleInputChange('address', 'floor', value)}
-              />
-            </View>
-          </View>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Комментарий к адресу</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Дополнительная информация для курьера"
-              placeholderTextColor={colors.textMuted}
-              value={deliveryAddress.comment}
-              onChangeText={(value) => handleInputChange('address', 'comment', value)}
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-        </View>
-      )}
-
-      {/* Контактная информация */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Контактная информация</Text>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Имя *</Text>
-          <TextInput
-            style={[
-              styles.input,
-              errors.name && styles.inputError,
-            ]}
-            placeholder="Ваше имя"
-            placeholderTextColor={colors.textMuted}
-            value={contactInfo.name}
-            onChangeText={(value) => handleInputChange('contact', 'name', value)}
-          />
-          {errors.name && (
-            <Text style={styles.errorText}>{errors.name}</Text>
-          )}
-        </View>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Телефон *</Text>
-          <TextInput
-            style={[
-              styles.input,
-              errors.phone && styles.inputError,
-            ]}
-            placeholder="+375 (XX) XXX-XX-XX"
-            placeholderTextColor={colors.textMuted}
-            value={contactInfo.phone}
-            onChangeText={(value) => handleInputChange('contact', 'phone', value)}
-            keyboardType="phone-pad"
-          />
-          {errors.phone && (
-            <Text style={styles.errorText}>{errors.phone}</Text>
-          )}
-        </View>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="your@email.com"
-            placeholderTextColor={colors.textMuted}
-            value={contactInfo.email}
-            onChangeText={(value) => handleInputChange('contact', 'email', value)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
-      </View>
-
-      {/* Способ оплаты */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Способ оплаты</Text>
-        <View style={styles.optionsContainer}>
-          <TouchableOpacity
-            style={[
-              styles.optionButton,
-              paymentMethod === 'cash' && styles.optionButtonActive,
-            ]}
-            onPress={() => setPaymentMethod('cash')}
-          >
-            <Text
-              style={[
-                styles.optionText,
-                paymentMethod === 'cash' && styles.optionTextActive,
-              ]}
-            >
-              💵 Наличными
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.optionButton,
-              paymentMethod === 'card' && styles.optionButtonActive,
-            ]}
-            onPress={() => setPaymentMethod('card')}
-          >
-            <Text
-              style={[
-                styles.optionText,
-                paymentMethod === 'card' && styles.optionTextActive,
-              ]}
-            >
-              💳 Картой
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Комментарий к заказу */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Комментарий к заказу</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Дополнительные пожелания к заказу"
-          placeholderTextColor={colors.textMuted}
-          value={orderComment}
-          onChangeText={setOrderComment}
-          multiline
-          numberOfLines={3}
-        />
-      </View>
-
-      {/* Состав заказа */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Ваш заказ</Text>
-        <FlatList
-          data={items}
-          renderItem={renderOrderItem}
-          keyExtractor={(item) => item.id.toString()}
-          scrollEnabled={false}
-        />
-      </View>
-
-      {/* Итоговая сумма */}
-      <View style={styles.summarySection}>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Сумма заказа:</Text>
-          <Text style={styles.summaryValue}>{num(totalAmount).toFixed(2)} BYN</Text>
-        </View>
-        {deliveryType === 'delivery' && (
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Доставка:</Text>
-            <Text style={styles.summaryValue}>{num(deliveryFee).toFixed(2)} BYN</Text>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {blocked && (
+          <View style={styles.banner}>
+            <Text style={styles.bannerText}>{options.reason}</Text>
           </View>
         )}
-        <View style={styles.summaryDivider} />
-        <View style={styles.summaryRow}>
-          <Text style={styles.totalLabel}>Итого к оплате:</Text>
-          <Text style={styles.totalValue}>{num(finalTotal).toFixed(2)} BYN</Text>
-        </View>
-      </View>
 
-      {/* Кнопка оформления */}
-      <View style={styles.bottomSection}>
+        <Text style={styles.section}>Получение</Text>
+        {options && chips(options.delivery_types, deliveryType, setDeliveryType)}
+        {deliveryType === 'delivery' && field('address', 'Адрес доставки *', { placeholder: 'ул. Ленина, д. 1, кв. 1' })}
+
+        <Text style={styles.section}>Контакты</Text>
+        {field('customer_name', 'Имя *', { placeholder: 'Иван', maxLength: 100 })}
+        {field('phone', 'Телефон *', { placeholder: '+375 (29) 123-45-67', keyboardType: 'phone-pad', maxLength: 32 })}
+
+        <Text style={styles.section}>Оплата при получении</Text>
+        {options && chips(options.payment_methods, paymentMethod, setPaymentMethod)}
+
+        {field('comment', 'Комментарий', { placeholder: 'Пожелания к заказу', multiline: true, maxLength: 1000 })}
+
+        <Text style={styles.section}>Итог</Text>
+        {!quote ? (
+          <ActivityIndicator color={colors.accent} />
+        ) : empty ? (
+          <Text style={styles.muted}>Корзина пуста</Text>
+        ) : (
+          <View style={styles.card}>
+            {quote.lines.map((line) => (
+              <View key={line.id} style={styles.row}>
+                <Text style={styles.rowName} numberOfLines={1}>{`${line.name} × ${line.quantity}`}</Text>
+                <Text style={styles.rowValue}>{money(line.total)}</Text>
+              </View>
+            ))}
+            {num(quote.discount_amount) > 0 && (
+              <View style={styles.row}>
+                <Text style={styles.rowName}>Скидка</Text>
+                <Text style={[styles.rowValue, styles.discount]}>−{money(quote.discount_amount)}</Text>
+              </View>
+            )}
+            {deliveryType === 'delivery' && (
+              <View style={styles.row}>
+                <Text style={styles.rowName}>Доставка</Text>
+                <Text style={styles.rowValue}>{num(quote.delivery_cost) > 0 ? money(quote.delivery_cost) : 'бесплатно'}</Text>
+              </View>
+            )}
+            <View style={[styles.row, styles.totalRow]}>
+              <Text style={styles.totalLabel}>К оплате</Text>
+              <Text style={styles.totalValue}>{money(quote.total_price)}</Text>
+            </View>
+          </View>
+        )}
+
         <TouchableOpacity
-          style={[
-            styles.orderButton,
-            (isLoading || submitting) && styles.orderButtonDisabled,
-          ]}
-          onPress={handleCreateOrder}
-          disabled={isLoading || submitting}
+          style={styles.consentRow}
+          onPress={() => {
+            setConsent(!consent);
+            if (errors.consent) setErrors((prev) => ({ ...prev, consent: null }));
+          }}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: consent }}
         >
-          {(isLoading || submitting) ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <Text style={styles.orderButtonText}>
-              Оформить заказ на {num(finalTotal).toFixed(2)} BYN
+          <View style={[styles.checkbox, consent && styles.checkboxOn, errors.consent && styles.inputError]}>
+            {consent ? <Text style={styles.checkmark}>✓</Text> : null}
+          </View>
+          <Text style={styles.consentText}>
+            Согласен(на) на обработку персональных данных в соответствии с{' '}
+            <Text style={styles.link} onPress={() => Linking.openURL(PRIVACY_URL)}>
+              политикой обработки персональных данных
             </Text>
-          )}
+          </Text>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+        {errors.consent ? <Text style={styles.error}>{errors.consent}</Text> : null}
+
+        <TouchableOpacity
+          style={[styles.submit, (sending || empty || blocked || !quote) && styles.submitDisabled]}
+          onPress={submit}
+          disabled={sending || empty || blocked || !quote}
+        >
+          <Text style={styles.submitText}>
+            {sending ? 'Оформляем…' : `Оформить заказ${quote && !empty ? ` · ${money(quote.total_price)}` : ''}`}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
-};
+}
 
-const makeStyles = (colors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  header: {
-    backgroundColor: colors.accent,
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.buttonText,
-  },
-  section: {
-    backgroundColor: colors.cardBg,
-    marginTop: 10,
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 15,
-  },
-  optionsContainer: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  optionButton: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    alignItems: 'center',
-  },
-  optionButtonActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  optionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-    textAlign: 'center',
-  },
-  optionTextActive: {
-    color: colors.buttonText,
-  },
-  inputContainer: {
-    marginBottom: 15,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  halfWidth: {
-    flex: 1,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  input: {
-    color: colors.text,
-    backgroundColor: colors.bg,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  inputError: {
-    borderColor: colors.error,
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  errorText: {
-    color: colors.error,
-    fontSize: 14,
-    marginTop: 5,
-  },
-  orderItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.hoverBg,
-  },
-  itemInfo: {
-    flex: 1,
-    marginRight: 10,
-  },
-  itemName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  itemOption: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginBottom: 2,
-  },
-  itemPricing: {
-    alignItems: 'flex-end',
-  },
-  itemQuantity: {
-    fontSize: 14,
-    color: colors.textMuted,
-    marginBottom: 2,
-  },
-  itemPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.accent,
-  },
-  summarySection: {
-    backgroundColor: colors.cardBg,
-    marginTop: 10,
-    padding: 20,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  summaryLabel: {
-    fontSize: 16,
-    color: colors.text,
-  },
-  summaryValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.text,
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginVertical: 10,
-  },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
-  },
-  totalValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.accent,
-  },
-  bottomSection: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  orderButton: {
-    backgroundColor: colors.accent,
-    paddingVertical: 16,
-    borderRadius: 20,
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  orderButtonDisabled: {
-    backgroundColor: colors.divider,
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  orderButtonText: {
-    color: colors.buttonText,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-});
-
-export default CheckoutScreen;
+const makeStyles = (colors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: 16, paddingBottom: 40 },
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24, backgroundColor: colors.bg },
+    title: { fontSize: 18, fontWeight: '700', color: colors.text, textAlign: 'center' },
+    muted: { fontSize: 14, color: colors.textMuted, textAlign: 'center' },
+    banner: { padding: 14, borderRadius: 12, marginBottom: 8, backgroundColor: colors.errorRgba },
+    bannerText: { fontSize: 14, color: colors.text },
+    section: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: 18, marginBottom: 10 },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    chip: {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.divider,
+      backgroundColor: colors.cardBg,
+    },
+    chipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+    chipText: { fontSize: 14, color: colors.text },
+    chipTextActive: { color: colors.buttonText, fontWeight: '600' },
+    field: { marginTop: 12 },
+    label: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 6 },
+    input: {
+      backgroundColor: colors.cardBg,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.divider,
+      color: colors.text,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+    },
+    inputError: { borderColor: colors.error },
+    error: { marginTop: 4, fontSize: 12, color: colors.error },
+    card: { padding: 14, borderRadius: 12, gap: 8, backgroundColor: colors.cardBg },
+    row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+    rowName: { flex: 1, fontSize: 14, color: colors.text },
+    rowValue: { fontSize: 14, color: colors.text },
+    discount: { color: colors.success },
+    totalRow: { marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.divider },
+    totalLabel: { fontSize: 16, fontWeight: '700', color: colors.text },
+    totalValue: { fontSize: 18, fontWeight: '700', color: colors.accent },
+    consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 20 },
+    checkbox: {
+      width: 24,
+      height: 24,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: colors.divider,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+    checkmark: { color: colors.buttonText, fontWeight: '700' },
+    consentText: { flex: 1, fontSize: 14, color: colors.text },
+    link: { color: colors.accent, textDecorationLine: 'underline' },
+    submit: { marginTop: 18, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, alignItems: 'center', backgroundColor: colors.accent },
+    submitDisabled: { opacity: 0.5 },
+    submitText: { fontSize: 16, fontWeight: '700', color: colors.buttonText },
+  });

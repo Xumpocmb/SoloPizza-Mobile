@@ -16,7 +16,7 @@ describe('Redux store', () => {
     const { store } = require('../src/store/store');
     const state = store.getState();
     expect(Object.keys(state).sort()).toEqual(
-      ['auth', 'cart', 'order', 'products'],
+      ['auth', 'cart', 'products'],
     );
   });
 
@@ -63,8 +63,7 @@ describe('Сервисы', () => {
   it('нет ни одного undefined-эндпоинта в API_ENDPOINTS (было 20)', () => {
     const { API_ENDPOINTS } = require('../src/config/api');
     const used = [
-      ['ORDERS', 'CREATE'], ['ORDERS', 'LIST'], ['ORDERS', 'PAYMENT'],
-      ['ORDERS', 'DELIVERY_COST'], ['ORDERS', 'TRACK'], ['ORDERS', 'RECEIPT'],
+      ['ORDERS', 'LIST'], ['ORDERS', 'DETAIL'], ['CHECKOUT', 'OPTIONS'], ['CHECKOUT', 'QUOTE'],
       ['PROMO', 'ACTIVE'], ['USER', 'ADDRESSES'], ['USER', 'STATS'],
     ];
     used.forEach(([g, k]) => {
