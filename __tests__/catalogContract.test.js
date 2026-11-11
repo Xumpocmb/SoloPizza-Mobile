@@ -149,7 +149,7 @@ describe('theme: палитра сайта', () => {
 
 // 04.11.2026: веб-превью на ПК ходит в живой API через прокси dev-сервера
 // (CORS друг не отдаёт), поэтому на web база ОТНОСИТЕЛЬНАЯ — '/api/v1'.
-test('веб-версия использует относительную базу (прокси webpack-dev-server обходит CORS)', () => {
+test('веб-версия использует относительную базу (прокси dev-сервера Expo обходит CORS)', () => {
   jest.resetModules();
   jest.doMock('react-native', () => ({ Platform: { OS: 'web' } }));
   const { API_BASE_URL: webBase } = require('../src/config/api');
