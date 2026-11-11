@@ -326,14 +326,6 @@ const CartScreen = ({ navigation }) => {
       {/* Заголовок */}
       <View style={styles.header}>
         <Text style={styles.title}>Корзина</Text>
-        {items.length > 0 && (
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={handleClearCart}
-          >
-            <Text style={styles.clearButtonText}>Очистить</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {items.length === 0 ? (
@@ -358,12 +350,7 @@ const CartScreen = ({ navigation }) => {
 
           {/* Нижняя панель с кнопкой оформления */}
           <View style={styles.bottomPanel}>
-            <View style={styles.totalContainer}>
-              <Text style={styles.bottomTotalLabel}>Итого:</Text>
-              <Text style={styles.bottomTotalValue}>
-                {totalAmount.toFixed(2)} BYN
-              </Text>
-            </View>
+            {/* итог уже есть в сводке под списком — здесь не дублируем */}
             <TouchableOpacity
               style={styles.checkoutButton}
               onPress={handleCheckout}
@@ -371,6 +358,13 @@ const CartScreen = ({ navigation }) => {
               <Text style={styles.checkoutButtonText}>
                 Оформить заказ
               </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={handleClearCart}
+              accessibilityRole="button"
+            >
+              <Text style={styles.clearButtonText}>Очистить корзину</Text>
             </TouchableOpacity>
           </View>
         </>
@@ -402,24 +396,6 @@ const makeStyles = (colors) => StyleSheet.create({
     fontWeight: '700',
     color: colors.buttonText,
     textAlign: 'center',
-  },
-  clearButton: {
-    position: 'absolute',
-    right: 16,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 2,
-    bordercolor: colors.buttonText,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  clearButtonText: {
-    color: colors.buttonText,
-    fontSize: 14,
-    fontWeight: '600',
   },
   cartList: {
     paddingBottom: 24,
@@ -627,21 +603,6 @@ const makeStyles = (colors) => StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  bottomTotalLabel: {
-    fontSize: 18,
-    color: colors.text,
-  },
-  bottomTotalValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.accent,
-  },
   checkoutButton: {
     backgroundColor: colors.accent,
     paddingVertical: 18,
@@ -658,6 +619,18 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  clearButton: {
+    marginTop: 10,
+    paddingVertical: 14,
+    borderRadius: 20,
+    alignItems: 'center',
+    backgroundColor: colors.error,
+  },
+  clearButtonText: {
+    color: colors.buttonText,
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 

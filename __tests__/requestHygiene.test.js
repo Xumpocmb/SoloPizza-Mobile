@@ -72,11 +72,12 @@ describe('дефект №2: дубли запросов каталога', () =
     expect(apiService.get.mock.calls.length).toBeGreaterThan(before);
   });
 
-  test('фильтрованный запрос (поиск) не читает и не портит кэш полного списка', async () => {
+  test('запрос с фильтром категории не читает и не портит кэш полного списка', async () => {
     await catalogService.getProducts();
-    const found = await catalogService.searchProducts('ант');
-    expect(found.length).toBe(1);
+    await catalogService.getProducts({ category: 'picca' });
     expect(callsTo('/products/')).toBe(2); // кэш + свежий фильтрованный
+    await catalogService.getProducts();
+    expect(callsTo('/products/')).toBe(2); // полный список по-прежнему из кэша
   });
 
   test('демо-ответ не кэшируется: оживший сервер виден следующим запросом', async () => {

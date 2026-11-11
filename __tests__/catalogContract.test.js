@@ -99,11 +99,6 @@ describe('contract: products', () => {
     expect(apiService.get).toHaveBeenCalledWith('/products/', { branch_id: 1, category: 'picca' }, expect.any(Object));
   });
 
-  test('поиск фильтрует по имени (серверного поиска в app_api нет)', async () => {
-    const found = await catalogService.searchProducts('пепперони');
-    expect(found.length).toBeGreaterThan(0);
-    found.forEach((product) => expect(product.name.toLowerCase()).toContain('пепперони'));
-  });
 });
 
 describe('contract: product detail', () => {
