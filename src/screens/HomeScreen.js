@@ -14,7 +14,6 @@ import {
 import ProductImage, { CATEGORY_GLYPHS } from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchFeaturedProducts, fetchCategories } from '../store/slices/productSlice';
-import { addToCart } from '../store/slices/cartSlice';
 import { catalogService, productService, promoService, vacancyService } from '../services';
 import DemoBanner from '../components/ui/DemoBanner';
 import WeeklySpecialBanner from '../components/WeeklySpecialBanner';
@@ -123,14 +122,9 @@ const HomeScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
+  // Размер, соус и добавки выбираются в карточке: без варианта заказ не оформить
   const handleAddToCart = (product) => {
-    dispatch(addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      quantity: 1
-    }));
+    navigation.navigate('ProductDetail', { productId: product.id });
   };
 
   const navigateToCategory = (category) => {

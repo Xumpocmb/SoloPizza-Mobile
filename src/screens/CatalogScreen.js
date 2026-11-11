@@ -10,11 +10,10 @@ import {
   RefreshControl,
   Platform,
 } from 'react-native';
-import Alert from '../utils/alertShim';
+import { num } from '../utils/money';
 import ProductImage from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, fetchCategories } from '../store/slices/productSlice';
-import { addToCart } from '../store/slices/cartSlice';
 import DemoBanner from '../components/ui/DemoBanner';
 import useAppTheme from '../theme/useAppTheme';
 
@@ -98,15 +97,9 @@ const CatalogScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
+  // Размер, соус и добавки выбираются в карточке: без варианта заказ не оформить
   const handleAddToCart = (product) => {
-    dispatch(addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      quantity: 1
-    }));
-    Alert.alert('Успешно', `${product.name} добавлен в корзину`);
+    navigation.navigate('ProductDetail', { productId: product.id });
   };
 
   const filterProducts = () => {
@@ -168,7 +161,7 @@ const CatalogScreen = ({ navigation }) => {
           {item.description || item.short_description || 'Описание товара'}
         </Text>
         <View style={styles.productFooter}>
-          <Text style={styles.productPrice}>{item.price || item.base_price} ₽</Text>
+          <Text style={styles.productPrice}>{num(item.price ?? item.base_price).toFixed(2)} BYN</Text>
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => handleAddToCart(item)}

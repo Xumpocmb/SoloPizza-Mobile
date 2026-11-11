@@ -6,264 +6,72 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Dimensions,
 } from 'react-native';
+import { useDispatch } from 'react-redux';
 import Alert from '../utils/alertShim';
 import ProductImage from '../components/ui/ProductImage';
 import useAppTheme from '../theme/useAppTheme';
 import { num } from '../utils/money';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchProductById } from '../store/slices/productSlice';
 import { addToCart } from '../store/slices/cartSlice';
 import { productService } from '../services';
+import {
+  optionLabel,
+  variantLabel,
+  initialSelection,
+  withVariant,
+  toggleAddon,
+  unitPrice,
+  boardsAvailable,
+  addonsAvailable,
+  buildCartItem,
+} from '../utils/productOptions';
 
-const { width } = Dimensions.get('window');
+const MAX_QUANTITY = 10; // как на сайте (AddToCartForm)
+
+const Chip = ({ styles, active, label, price, onPress }) => (
+  <TouchableOpacity
+    style={[styles.optionButton, active && styles.optionButtonActive]}
+    onPress={onPress}
+  >
+    <Text style={[styles.optionText, active && styles.optionTextActive]}>{label}</Text>
+    {num(price) > 0 && (
+      <Text style={[styles.optionPrice, active && styles.optionPriceActive]}>
+        +{num(price).toFixed(2)} BYN
+      </Text>
+    )}
+  </TouchableOpacity>
+);
 
 const ProductDetailScreen = ({ route, navigation }) => {
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
-  const { productId, product: routeProduct } = route.params;
+  const { productId } = route.params;
   const dispatch = useDispatch();
-  const { currentProduct, loading: reduxLoading } = useSelector(state => state.products);
-  const { user } = useSelector(state => state.auth);
 
-  const [product, setProduct] = useState(routeProduct || currentProduct);
-  const [loading, setLoading] = useState(!routeProduct && !currentProduct);
-  const [selectedSize, setSelectedSize] = useState(null);
-  const [selectedToppings, setSelectedToppings] = useState([]);
+  const [product, setProduct] = useState(null);
+  const [selection, setSelection] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [totalPrice, setTotalPrice] = useState(0);
-  const [sizes, setSizes] = useState([]);
-  const [toppings, setToppings] = useState([]);
-
-  const loadProductDetail = async () => {
-    try {
-      setLoading(true);
-      const productData = await productService.getProductDetail(productId);
-      setProduct(productData);
-      loadProductOptions(productData);
-    } catch (error) {
-      console.error('Error loading product detail:', error);
-      Alert.alert('Ошибка', 'Не удалось загрузить информацию о товаре');
-      navigation.goBack();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadProductOptions = async (productData = product) => {
-    try {
-      // Load sizes and toppings for the product
-      if (productData?.category === 'pizza' || productData?.category_name === 'Пицца') {
-        const [sizesData, toppingsData] = await Promise.all([
-          productService.getProductSizes(productData.id),
-          productService.getProductToppings(productData.id)
-        ]);
-        
-        setSizes(sizesData || []);
-        setToppings(toppingsData || []);
-        
-        // Set default size
-        if (sizesData && sizesData.length > 0) {
-          setSelectedSize(sizesData.find(s => s.is_default) || sizesData[0]);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading product options:', error);
-      // Fallback to mock data
-      setSizes([
-        { id: 1, name: 'Маленькая', size: '25 см', price: 0 },
-        { id: 2, name: 'Средняя', size: '30 см', price: 200 },
-        { id: 3, name: 'Большая', size: '35 см', price: 400 },
-      ]);
-      
-      setToppings([
-        { id: 1, name: 'Дополнительный сыр', price: 150 },
-        { id: 2, name: 'Пепперони', price: 200 },
-        { id: 3, name: 'Грибы', price: 100 },
-        { id: 4, name: 'Оливки', price: 120 },
-        { id: 5, name: 'Томаты', price: 80 },
-        { id: 6, name: 'Болгарский перец', price: 90 },
-      ]);
-    }
-  };
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (productId && !routeProduct) {
-      if (currentProduct && currentProduct.id === productId) {
-        setProduct(currentProduct);
-        setLoading(false);
-        loadProductOptions(currentProduct);
-      } else {
-        dispatch(fetchProductById(productId));
-        loadProductDetail();
-      }
-    } else if (routeProduct) {
-      loadProductOptions(routeProduct);
-    }
-  }, [productId, routeProduct, currentProduct, dispatch]);
-
-  useEffect(() => {
-    // Update product from Redux if it changes
-    if (currentProduct && currentProduct.id === productId && !routeProduct) {
-      setProduct(currentProduct);
-      setLoading(reduxLoading);
-    }
-  }, [currentProduct, reduxLoading, productId, routeProduct]);
-
-  useEffect(() => {
-    // Устанавливаем размер по умолчанию
-    if (sizes.length > 0 && !selectedSize) {
-      setSelectedSize(sizes[0]);
-    }
-  }, [sizes]);
-
-  useEffect(() => {
-    // Пересчитываем общую стоимость
-    if (product && selectedSize) {
-      const basePrice = num(product.price ?? product.base_price);
-      const sizePrice = num(selectedSize?.price);
-      const toppingsPrice = selectedToppings.reduce((sum, topping) => sum + num(topping.price), 0);
-      setTotalPrice((basePrice + sizePrice + toppingsPrice) * quantity);
-    }
-  }, [product, selectedSize, selectedToppings, quantity]);
-
-  const handleSizeSelect = (size) => {
-    setSelectedSize(size);
-  };
-
-  const handleToppingToggle = (topping) => {
-    const isSelected = selectedToppings.find(t => t.id === topping.id);
-    if (isSelected) {
-      setSelectedToppings(selectedToppings.filter(t => t.id !== topping.id));
-    } else {
-      setSelectedToppings([...selectedToppings, topping]);
-    }
-  };
-
-  const handleQuantityChange = (change) => {
-    const newQuantity = quantity + change;
-    if (newQuantity >= 1 && newQuantity <= 10) {
-      setQuantity(newQuantity);
-    }
-  };
-
-  const handleAddToCart = () => {
-    if (!product || !selectedSize) {
-      Alert.alert('Ошибка', 'Пожалуйста, выберите размер');
-      return;
-    }
-
-    const cartItem = {
-      id: `${product.id}_${selectedSize.id}_${selectedToppings.map(t => t.id).join('_')}`,
-      productId: product.id,
-      name: product.name,
-      image: product.image || product.images?.[0]?.image,
-      price: num(totalPrice) / quantity,
-      quantity: quantity,
-      size: selectedSize,
-      toppings: selectedToppings,
+    let active = true;
+    productService
+      .getProductDetail(productId)
+      .then((data) => {
+        if (!active) return;
+        setProduct(data);
+        setSelection(initialSelection(data));
+      })
+      .catch(() => {
+        if (active) setProduct(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
     };
-
-    dispatch(addToCart(cartItem));
-    Alert.alert(
-      'Добавлено в корзину',
-      `${product.name} добавлена в корзину`,
-      [
-        { text: 'Продолжить покупки', style: 'cancel' },
-        { text: 'Перейти в корзину', onPress: () => navigation.navigate('Cart') },
-      ]
-    );
-  };
-
-  const renderSizeSelector = () => {
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Размер</Text>
-        <View style={styles.optionsContainer}>
-          {sizes.map((size) => (
-            <TouchableOpacity
-              key={size.id}
-              style={[
-                styles.optionButton,
-                selectedSize?.id === size.id && styles.optionButtonActive,
-              ]}
-              onPress={() => handleSizeSelect(size)}
-            >
-              <Text
-                style={[
-                  styles.optionText,
-                  selectedSize?.id === size.id && styles.optionTextActive,
-                ]}
-              >
-                {size.name} ({size.size})
-              </Text>
-              {size.price > 0 && (
-                <Text
-                  style={[
-                    styles.optionPrice,
-                    selectedSize?.id === size.id && styles.optionPriceActive,
-                  ]}
-                >
-                  +{size.price} BYN
-                </Text>
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    );
-  };
-
-  const renderToppingsSelector = () => {
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Добавки</Text>
-        <View style={styles.addonsContainer}>
-          {toppings.map((topping) => {
-            const isSelected = selectedToppings.find(item => item.id === topping.id);
-            return (
-              <TouchableOpacity
-                key={topping.id}
-                style={[
-                  styles.addonItem,
-                  isSelected && styles.addonItemActive,
-                ]}
-                onPress={() => handleToppingToggle(topping)}
-              >
-                <View style={styles.addonInfo}>
-                  <Text
-                    style={[
-                      styles.addonName,
-                      isSelected && styles.addonNameActive,
-                    ]}
-                  >
-                    {topping.name}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.addonPrice,
-                      isSelected && styles.addonPriceActive,
-                    ]}
-                  >
-                    +{topping.price} BYN
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.checkbox,
-                    isSelected && styles.checkboxActive,
-                  ]}
-                >
-                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-    );
-  };
+  }, [productId]);
 
   if (loading) {
     return (
@@ -274,54 +82,164 @@ const ProductDetailScreen = ({ route, navigation }) => {
     );
   }
 
-  if (!product) {
+  if (!product || !selection?.variant) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>Товар не найден</Text>
-        <TouchableOpacity 
-          style={styles.addToCartButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.addToCartButton} onPress={() => navigation.goBack()}>
           <Text style={styles.addToCartButtonText}>Назад</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  const { variant } = selection;
+  const variants = product.variants ?? [];
+  const sauces = product.has_base_sauce ? product.sauces ?? [] : [];
+  const drinks = product.has_drink ? product.drinks ?? [] : [];
+  const total = unitPrice(selection) * quantity;
+
+  const handleAddToCart = () => {
+    dispatch(addToCart(buildCartItem(product, selection, quantity)));
+    Alert.alert('Добавлено в корзину', `${product.name} — в корзине`, [
+      { text: 'Продолжить покупки', style: 'cancel' },
+      { text: 'Перейти в корзину', onPress: () => navigation.navigate('Cart') },
+    ]);
+  };
+
+  // Два борта, как на сайте: оба необязательные и не могут совпадать
+  const renderBoardRow = (slot, otherSlot, title) => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.optionsContainer}>
+        <Chip
+          styles={styles}
+          label="Без борта"
+          active={!selection[slot]}
+          onPress={() => setSelection({ ...selection, [slot]: null })}
+        />
+        {variant.boards
+          .filter((board) => board.id !== selection[otherSlot]?.id)
+          .map((board) => (
+            <Chip
+              key={board.id}
+              styles={styles}
+              label={optionLabel(board.name)}
+              price={board.price}
+              active={selection[slot]?.id === board.id}
+              onPress={() => setSelection({ ...selection, [slot]: board })}
+            />
+          ))}
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Изображение товара */}
-        <ProductImage
-          uri={product.image || product.images?.[0]?.image}
-          style={styles.productImage}
-          emojiSize={72}
-        />
+        <ProductImage uri={product.image} style={styles.productImage} emojiSize={72} />
 
-        {/* Информация о товаре */}
         <View style={styles.productInfo}>
           <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.productDescription}>
-            {product.description}
-          </Text>
-          <Text style={styles.basePrice}>
-            Базовая цена: {num(product.price ?? product.base_price).toFixed(2)} BYN
-          </Text>
+          {!!product.description && (
+            <Text style={styles.productDescription}>{product.description}</Text>
+          )}
         </View>
 
-        {/* Селектор размера */}
-        {renderSizeSelector()}
+        {variants.length > 1 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{variant.size ? 'Размер' : 'Вариант'}</Text>
+            <View style={styles.optionsContainer}>
+              {variants.map((v) => (
+                <Chip
+                  key={v.id}
+                  styles={styles}
+                  label={`${variantLabel(v)} — ${num(v.price).toFixed(2)} BYN`}
+                  active={variant.id === v.id}
+                  onPress={() => setSelection(withVariant(selection, v))}
+                />
+              ))}
+            </View>
+          </View>
+        )}
 
-        {/* Селектор добавок */}
-        {renderToppingsSelector()}
+        {sauces.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Соус-основа</Text>
+            <View style={styles.optionsContainer}>
+              {sauces.map((sauce) => (
+                <Chip
+                  key={sauce.id}
+                  styles={styles}
+                  label={sauce.name}
+                  active={selection.sauce?.id === sauce.id}
+                  onPress={() => setSelection({ ...selection, sauce })}
+                />
+              ))}
+            </View>
+          </View>
+        )}
 
-        {/* Количество */}
+        {boardsAvailable(product, variant) && (
+          <>
+            {renderBoardRow('board1', 'board2', 'Первый борт')}
+            {renderBoardRow('board2', 'board1', 'Второй борт')}
+          </>
+        )}
+
+        {addonsAvailable(product, variant) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Добавки</Text>
+            <View style={styles.addonsContainer}>
+              {variant.addons.map((addon) => {
+                const isSelected = selection.addons.some((a) => a.id === addon.id);
+                return (
+                  <TouchableOpacity
+                    key={addon.id}
+                    style={[styles.addonItem, isSelected && styles.addonItemActive]}
+                    onPress={() => setSelection(toggleAddon(selection, addon))}
+                  >
+                    <View style={styles.addonInfo}>
+                      <Text style={[styles.addonName, isSelected && styles.addonNameActive]}>
+                        {optionLabel(addon.name)}
+                      </Text>
+                      <Text style={[styles.addonPrice, isSelected && styles.addonPriceActive]}>
+                        +{num(addon.price).toFixed(2)} BYN
+                      </Text>
+                    </View>
+                    <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
+                      {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {drinks.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Напиток</Text>
+            <View style={styles.optionsContainer}>
+              {drinks.map((drink) => (
+                <Chip
+                  key={drink.id}
+                  styles={styles}
+                  label={drink.name}
+                  active={selection.drink?.id === drink.id}
+                  onPress={() => setSelection({ ...selection, drink })}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Количество</Text>
           <View style={styles.quantityContainer}>
             <TouchableOpacity
               style={styles.quantityButton}
-              onPress={() => handleQuantityChange(-1)}
+              onPress={() => setQuantity(quantity - 1)}
               disabled={quantity <= 1}
             >
               <Text style={styles.quantityButtonText}>-</Text>
@@ -329,66 +247,21 @@ const ProductDetailScreen = ({ route, navigation }) => {
             <Text style={styles.quantityText}>{quantity}</Text>
             <TouchableOpacity
               style={styles.quantityButton}
-              onPress={() => handleQuantityChange(1)}
-              disabled={quantity >= 99}
+              onPress={() => setQuantity(quantity + 1)}
+              disabled={quantity >= MAX_QUANTITY}
             >
               <Text style={styles.quantityButtonText}>+</Text>
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Пищевая ценность */}
-        {product.nutrition && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Пищевая ценность</Text>
-            <View style={styles.nutritionContainer}>
-              {product.nutrition.calories && (
-                <View style={styles.nutritionItem}>
-                  <Text style={styles.nutritionLabel}>Калории:</Text>
-                  <Text style={styles.nutritionValue}>
-                    {product.nutrition.calories} ккал
-                  </Text>
-                </View>
-              )}
-              {product.nutrition.proteins && (
-                <View style={styles.nutritionItem}>
-                  <Text style={styles.nutritionLabel}>Белки:</Text>
-                  <Text style={styles.nutritionValue}>
-                    {product.nutrition.proteins} г
-                  </Text>
-                </View>
-              )}
-              {product.nutrition.fats && (
-                <View style={styles.nutritionItem}>
-                  <Text style={styles.nutritionLabel}>Жиры:</Text>
-                  <Text style={styles.nutritionValue}>
-                    {product.nutrition.fats} г
-                  </Text>
-                </View>
-              )}
-              {product.nutrition.carbohydrates && (
-                <View style={styles.nutritionItem}>
-                  <Text style={styles.nutritionLabel}>Углеводы:</Text>
-                  <Text style={styles.nutritionValue}>
-                    {product.nutrition.carbohydrates} г
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
       </ScrollView>
 
-      {/* Нижняя панель с ценой и кнопкой */}
       <View style={styles.bottomPanel}>
         <View style={styles.priceContainer}>
           <Text style={styles.totalPriceLabel}>Итого:</Text>
-          <Text style={styles.totalPrice}>{num(totalPrice).toFixed(2)} BYN</Text>
+          <Text style={styles.totalPrice}>{total.toFixed(2)} BYN</Text>
         </View>
-        <TouchableOpacity
-          style={styles.addToCartButton}
-          onPress={handleAddToCart}
-        >
+        <TouchableOpacity style={styles.addToCartButton} onPress={handleAddToCart}>
           <Text style={styles.addToCartButtonText}>Добавить в корзину</Text>
         </TouchableOpacity>
       </View>
@@ -532,7 +405,7 @@ const makeStyles = (colors) => StyleSheet.create({
     elevation: 1,
   },
   addonItemActive: {
-    backgroundColor: colors.errorRgba,
+    backgroundColor: colors.accentRgba,
     borderColor: colors.accent,
   },
   addonInfo: {
@@ -544,7 +417,7 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.text,
   },
   addonNameActive: {
-    color: colors.accent,
+    color: colors.text,
   },
   addonPrice: {
     fontSize: 14,
