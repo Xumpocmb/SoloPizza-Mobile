@@ -2,7 +2,6 @@
 import apiService from './apiService';
 import authService from './authService';
 import catalogService from './catalogService';
-import cartService from './cartService';
 import orderService from './orderService';
 import productService from './productService'; // ← ДОБАВЛЕН
 import promoService from './promoService';     // ← ДОБАВЛЕН
@@ -13,7 +12,6 @@ export {
   apiService,
   authService,
   catalogService,
-  cartService,
   orderService,
   productService,
   promoService,
@@ -25,7 +23,6 @@ export default {
   api: apiService,
   auth: authService,
   catalog: catalogService,
-  cart: cartService,
   order: orderService,
   product: productService,
   promo: promoService,

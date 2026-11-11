@@ -59,12 +59,6 @@ const HomeScreen = ({ navigation }) => {
 
 
 
-  // Меню зависит от филиала: при смене перезагружаем главную
-  useEffect(() => {
-    loadData();
-    loadApiData();
-  }, [branchId]);
-
   const loadApiData = async (force = false) => {
     try {
       const [categoriesData, productsData, promosData, weeklyData, vacanciesData, announcementsData] = await Promise.all([
@@ -184,6 +178,12 @@ const HomeScreen = ({ navigation }) => {
       <Text style={styles.categoryName}>{item.name}</Text>
     </TouchableOpacity>
   );
+
+  // Меню зависит от филиала: при смене перезагружаем главную
+  useEffect(() => {
+    loadData();
+    loadApiData();
+  }, [branchId]);
 
   if (loading && !featuredProducts?.length && !categories?.length) {
     return (

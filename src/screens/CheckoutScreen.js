@@ -15,7 +15,7 @@ import { num } from '../utils/money';
 import { useDispatch, useSelector } from 'react-redux';
 import { createOrder } from '../store/slices/orderSlice';
 import { clearCart } from '../store/slices/cartSlice';
-import { orderService, cartService, userService } from '../services';
+import { orderService, userService } from '../services';
 
 const CheckoutScreen = ({ navigation }) => {
   const { colors } = useAppTheme();
@@ -53,24 +53,6 @@ const CheckoutScreen = ({ navigation }) => {
   // Доставка/скидки считаются на сервере (quote_cart появится у друга). Пока не выдумываем цифру.
   const deliveryFee = 0;
   const finalTotal = totalAmount + deliveryFee;
-
-  useEffect(() => {
-    loadCheckoutData();
-    loadUserData();
-    
-    if (items.length === 0) {
-      Alert.alert(
-        'Пустая корзина',
-        'Корзина пуста. Добавьте товары для оформления заказа.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Catalog'),
-          },
-        ]
-      );
-    }
-  }, [items, navigation]);
 
   const loadCheckoutData = async () => {
     try {
@@ -300,6 +282,24 @@ const CheckoutScreen = ({ navigation }) => {
       </View>
     </View>
   );
+
+  useEffect(() => {
+    loadCheckoutData();
+    loadUserData();
+    
+    if (items.length === 0) {
+      Alert.alert(
+        'Пустая корзина',
+        'Корзина пуста. Добавьте товары для оформления заказа.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('Catalog'),
+          },
+        ]
+      );
+    }
+  }, [items, navigation]);
 
   if (items.length === 0) {
     return null; // Компонент не рендерится, если корзина пуста

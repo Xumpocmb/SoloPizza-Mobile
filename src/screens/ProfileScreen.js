@@ -33,10 +33,6 @@ const ProfileScreen = ({ navigation }) => {
   });
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    loadStats();
-  }, []);
-
   const loadStats = async () => {
     try {
       setLoading(true);
@@ -193,6 +189,10 @@ const ProfileScreen = ({ navigation }) => {
       },
     },
   ];
+
+  useEffect(() => {
+    loadStats();
+  }, []);
 
   if (!user) {
     return (

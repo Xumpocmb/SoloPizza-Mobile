@@ -26,11 +26,6 @@ const OrderDetailScreen = ({ route, navigation }) => {
   const [tracking, setTracking] = useState(null);
   const [cancelling, setCancelling] = useState(false);
 
-  useEffect(() => {
-    dispatch(fetchOrderDetail(orderId));
-    loadTrackingData();
-  }, [dispatch, orderId]);
-
   const loadTrackingData = async () => {
     try {
       const trackingData = await orderService.trackOrder(orderId);
@@ -194,6 +189,11 @@ const OrderDetailScreen = ({ route, navigation }) => {
       </View>
     </View>
   );
+
+  useEffect(() => {
+    dispatch(fetchOrderDetail(orderId));
+    loadTrackingData();
+  }, [dispatch, orderId]);
 
   if (isLoading) {
     return (

@@ -41,10 +41,6 @@ const CartScreen = ({ navigation }) => {
   const [cartSummary, setCartSummary] = useState({ total: 0, discount: 0, delivery: 0 });
   const [updating, setUpdating] = useState(false);
 
-  useEffect(() => {
-    loadCart();
-  }, []);
-
   const loadCart = async () => {
     // Корзина локальная (redux + AsyncStorage): в app_api друга эндпоинтов
     // корзины нет, серверные вызовы давали 404 и красные тосты LogBox.
@@ -318,6 +314,10 @@ const CartScreen = ({ navigation }) => {
       </View>
     </View>
   );
+
+  useEffect(() => {
+    loadCart();
+  }, []);
 
   return (
     <View style={styles.container}>

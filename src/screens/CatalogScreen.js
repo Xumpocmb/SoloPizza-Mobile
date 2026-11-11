@@ -32,23 +32,6 @@ const CatalogScreen = ({ navigation }) => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  // Меню зависит от филиала: при смене перезагружаем каталог
-  useEffect(() => {
-    loadData();
-  }, [branchId]);
-
-  useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      loadData(true);
-    }, 500);
-    
-    return () => clearTimeout(delayedSearch);
-  }, [selectedCategory, searchQuery]);
-
-  useEffect(() => {
-    filterProducts();
-  }, [products, selectedCategory, searchQuery]);
-
   const loadData = async (reset = true, force = false) => {
     try {
       if (reset) {
@@ -175,6 +158,23 @@ const CatalogScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+
+  // Меню зависит от филиала: при смене перезагружаем каталог
+  useEffect(() => {
+    loadData();
+  }, [branchId]);
+
+  useEffect(() => {
+    filterProducts();
+  }, [products, selectedCategory, searchQuery]);
+
+  useEffect(() => {
+    const delayedSearch = setTimeout(() => {
+      loadData(true);
+    }, 500);
+    
+    return () => clearTimeout(delayedSearch);
+  }, [selectedCategory, searchQuery]);
 
   if (loading && !refreshing) {
     return (

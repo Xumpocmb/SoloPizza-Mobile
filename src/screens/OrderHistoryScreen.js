@@ -30,12 +30,6 @@ const OrderHistoryScreen = ({ navigation }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      loadOrders();
-    }
-  }, [dispatch, user]);
-
   const loadOrders = async (pageNum = 1, isRefresh = false) => {
     try {
       if (pageNum === 1) {
@@ -294,6 +288,12 @@ const OrderHistoryScreen = ({ navigation }) => {
       </TouchableOpacity>
     </View>
   );
+
+  useEffect(() => {
+    if (user) {
+      loadOrders();
+    }
+  }, [dispatch, user]);
 
   if (!user) {
     return (

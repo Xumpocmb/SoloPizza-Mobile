@@ -12,11 +12,11 @@
  */
 
 describe('Redux store', () => {
-  it('создаётся и содержит все 5 веток состояния', () => {
+  it('создаётся и содержит все ветки состояния', () => {
     const { store } = require('../src/store/store');
     const state = store.getState();
     expect(Object.keys(state).sort()).toEqual(
-      ['auth', 'cart', 'catalog', 'order', 'products'],
+      ['auth', 'cart', 'order', 'products'],
     );
   });
 
@@ -32,9 +32,9 @@ describe('Redux store', () => {
 });
 
 describe('Сервисы', () => {
-  it('index.js экспортирует все 8 сервисов (раньше не хватало трёх)', () => {
+  it('index.js экспортирует все сервисы', () => {
     const services = require('../src/services');
-    ['apiService', 'authService', 'catalogService', 'cartService', 'orderService',
+    ['apiService', 'authService', 'catalogService', 'orderService',
      'productService', 'promoService', 'userService']
       .forEach(name => {
         expect(services[name]).toBeDefined();
@@ -65,8 +65,7 @@ describe('Сервисы', () => {
     const used = [
       ['ORDERS', 'CREATE'], ['ORDERS', 'LIST'], ['ORDERS', 'PAYMENT'],
       ['ORDERS', 'DELIVERY_COST'], ['ORDERS', 'TRACK'], ['ORDERS', 'RECEIPT'],
-      ['CART', 'ADD'], ['CART', 'UPDATE'], ['CART', 'REMOVE'], ['CART', 'CLEAR'],
-      ['CART', 'PROMO'], ['PROMO', 'ACTIVE'], ['USER', 'ADDRESSES'], ['USER', 'STATS'],
+      ['PROMO', 'ACTIVE'], ['USER', 'ADDRESSES'], ['USER', 'STATS'],
     ];
     used.forEach(([g, k]) => {
       expect(API_ENDPOINTS[g]).toBeDefined();

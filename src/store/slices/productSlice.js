@@ -10,12 +10,6 @@
  *
  * Этот слайс повторяет форму состояния, которую уже ожидают экраны:
  *   { products, featuredProducts, categories, currentProduct, loading, error }
- *
- * ⚠️ ВАЖНО: сейчас в проекте ДВА слайса про каталог — `catalogSlice`
- * (зарегистрирован как state.catalog) и этот `productSlice` (state.products).
- * Экраны используют только `products`. После того как приложение запустится,
- * `catalogSlice` нужно удалить, а его вызовы перевести сюда. Отмечено в плане
- * как Фаза 2.
  */
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
