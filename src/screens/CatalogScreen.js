@@ -15,13 +15,14 @@ import ProductImage from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, fetchCategories } from '../store/slices/productSlice';
 import DemoBanner from '../components/ui/DemoBanner';
+import BranchPicker from '../components/BranchPicker';
 import useAppTheme from '../theme/useAppTheme';
 
 const CatalogScreen = ({ navigation }) => {
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
-  const { products, categories, loading, error } = useSelector(state => state.products);
+  const { products, categories, loading, error, branchId } = useSelector(state => state.products);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -31,9 +32,10 @@ const CatalogScreen = ({ navigation }) => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
+  // Меню зависит от филиала: при смене перезагружаем каталог
   useEffect(() => {
     loadData();
-  }, []);
+  }, [branchId]);
 
   useEffect(() => {
     const delayedSearch = setTimeout(() => {
@@ -197,6 +199,7 @@ const CatalogScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <DemoBanner />
+      <BranchPicker />
 
       {/* Поиск */}
       <View style={styles.searchContainer}>

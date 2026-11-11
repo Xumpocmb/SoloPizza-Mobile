@@ -20,6 +20,10 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { catalogService } from '../../services';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { clearCart } from './cartSlice';
+
+const BRANCH_STORAGE_KEY = 'branch_id';
 
 const PAGE_SIZE = 12;
 
@@ -136,17 +140,43 @@ export const fetchBranches = createAsyncThunk(
   },
 );
 
-/** Смена филиала: сбрасывает кэш товаров сервиса и список товаров в стейте. */
+/**
+ * Смена филиала: сбрасывает кэш каталога и запоминает выбор на устройстве.
+ * Как на сайте (app_home/views.py::select_branch): меню и наличие у филиалов
+ * разные, поэтому корзина при смене очищается.
+ */
 export const selectBranch = createAsyncThunk(
   'products/selectBranch',
-  async (branchId, { rejectWithValue }) => {
+  async (branchId, { dispatch, rejectWithValue }) => {
     if (branchId === undefined || branchId === null) {
       return rejectWithValue('Не указан идентификатор филиала');
     }
+    if (catalogService.getBranchId() !== branchId) {
+      await dispatch(clearCart());
+    }
     catalogService.setBranchId(branchId);
+    try {
+      await AsyncStorage.setItem(BRANCH_STORAGE_KEY, String(branchId));
+    } catch {
+      // не запомнили — при следующем запуске будет филиал по умолчанию
+    }
     return branchId;
   },
 );
+
+/** Филиал, выбранный в прошлый раз; без него каталог берёт default_branch_id из /meta/. */
+export const restoreBranch = createAsyncThunk('products/restoreBranch', async () => {
+  try {
+    const stored = Number(await AsyncStorage.getItem(BRANCH_STORAGE_KEY));
+    if (Number.isInteger(stored) && stored > 0) {
+      catalogService.setBranchId(stored);
+      return stored;
+    }
+  } catch {
+    // хранилище недоступно — работаем с филиалом по умолчанию
+  }
+  return null;
+});
 
 const initialState = {
   products: [],
@@ -263,6 +293,9 @@ const productSlice = createSlice({
       })
       .addCase(fetchBranches.rejected, (state, action) => {
         state.error = action.payload;
+      })
+      .addCase(restoreBranch.fulfilled, (state, action) => {
+        if (action.payload) state.branchId = action.payload;
       })
       .addCase(selectBranch.fulfilled, (state, action) => {
         state.branchId = action.payload;

@@ -16,6 +16,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchFeaturedProducts, fetchCategories } from '../store/slices/productSlice';
 import { catalogService, productService, promoService, vacancyService } from '../services';
 import DemoBanner from '../components/ui/DemoBanner';
+import BranchPicker from '../components/BranchPicker';
 import WeeklySpecialBanner from '../components/WeeklySpecialBanner';
 import useAppTheme from '../theme/useAppTheme';
 import { num } from '../utils/money';
@@ -26,7 +27,7 @@ const HomeScreen = ({ navigation }) => {
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
-  const { featuredProducts, categories, loading } = useSelector(state => state.products);
+  const { featuredProducts, categories, loading, branchId } = useSelector(state => state.products);
   
   const [refreshing, setRefreshing] = useState(false);
   const [bannerIndex, setBannerIndex] = useState(0);
@@ -57,10 +58,11 @@ const HomeScreen = ({ navigation }) => {
 
 
 
+  // Меню зависит от филиала: при смене перезагружаем главную
   useEffect(() => {
     loadData();
     loadApiData();
-  }, []);
+  }, [branchId]);
 
   const loadApiData = async (force = false) => {
     try {
@@ -196,7 +198,7 @@ const HomeScreen = ({ navigation }) => {
       }
     >
       <DemoBanner />
-
+      <BranchPicker />
 
       {/* Featured Products Section */}
       <View style={styles.section}>
