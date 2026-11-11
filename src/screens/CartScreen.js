@@ -305,10 +305,6 @@ const CartScreen = ({ navigation }) => {
         <Text style={styles.summaryLabel}>Товаров:</Text>
         <Text style={styles.summaryValue}>{totalItems} шт.</Text>
       </View>
-      <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Сумма:</Text>
-        <Text style={styles.summaryValue}>{num(totalAmount).toFixed(2)} BYN</Text>
-      </View>
       <View style={styles.summaryDivider} />
       <View style={styles.summaryRow}>
         <Text style={styles.totalLabel}>Итого к оплате:</Text>
