@@ -23,7 +23,7 @@ import {
   unitPrice,
   boardsAvailable,
   addonsAvailable,
-  buildCartItem,
+  buildCartPayload,
 } from '../utils/productOptions';
 
 const MAX_QUANTITY = 10; // как на сайте (AddToCartForm)
@@ -52,6 +52,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [selection, setSelection] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -99,12 +100,20 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const drinks = product.has_drink ? product.drinks ?? [] : [];
   const total = unitPrice(selection) * quantity;
 
-  const handleAddToCart = () => {
-    dispatch(addToCart(buildCartItem(product, selection, quantity)));
-    Alert.alert('Добавлено в корзину', `${product.name} — в корзине`, [
-      { text: 'Продолжить покупки', style: 'cancel' },
-      { text: 'Перейти в корзину', onPress: () => navigation.navigate('Cart') },
-    ]);
+  const handleAddToCart = async () => {
+    setAdding(true);
+    try {
+      await dispatch(addToCart(buildCartPayload(product, selection, quantity))).unwrap();
+      Alert.alert('Добавлено в корзину', `${product.name} — в корзине`, [
+        { text: 'Продолжить покупки', style: 'cancel' },
+        { text: 'Перейти в корзину', onPress: () => navigation.navigate('Cart') },
+      ]);
+    } catch (message) {
+      // сервер объясняет, что не так: товар не в этом филиале, борт не того размера и т.п.
+      Alert.alert('Не удалось добавить', String(message));
+    } finally {
+      setAdding(false);
+    }
   };
 
   // Два борта, как на сайте: оба необязательные и не могут совпадать
@@ -261,8 +270,12 @@ const ProductDetailScreen = ({ route, navigation }) => {
           <Text style={styles.totalPriceLabel}>Итого:</Text>
           <Text style={styles.totalPrice}>{total.toFixed(2)} BYN</Text>
         </View>
-        <TouchableOpacity style={styles.addToCartButton} onPress={handleAddToCart}>
-          <Text style={styles.addToCartButtonText}>Добавить в корзину</Text>
+        <TouchableOpacity
+          style={[styles.addToCartButton, adding && { opacity: 0.6 }]}
+          onPress={handleAddToCart}
+          disabled={adding}
+        >
+          <Text style={styles.addToCartButtonText}>{adding ? 'Добавляем…' : 'Добавить в корзину'}</Text>
         </TouchableOpacity>
       </View>
     </View>

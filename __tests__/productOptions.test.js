@@ -5,7 +5,7 @@ import {
   withVariant,
   toggleAddon,
   unitPrice,
-  buildCartItem,
+  buildCartPayload,
   cartItemOptions,
 } from '../src/utils/productOptions';
 
@@ -63,15 +63,27 @@ test('цена = вариант + борты + добавки; смена раз
   expect(unitPrice(s)).toBeCloseTo(26.5);
 });
 
-test('позиция корзины: одинаковые опции — одинаковый id, порядок добавок не важен', () => {
-  const base = { ...initialSelection(pizza), board1: pizza.variants[0].boards[0] };
-  const a = buildCartItem(pizza, { ...base, addons: [pizza.variants[0].addons[0], pizza.variants[0].addons[1]] }, 2);
-  const b = buildCartItem(pizza, { ...base, addons: [pizza.variants[0].addons[1], pizza.variants[0].addons[0]] }, 1);
-  expect(a.id).toBe(b.id);
-  expect(a.id).toBe('134-229-b1_1-s_2-a_1_4');
-  expect(a).toMatchObject({ productId: 134, variantId: 229, quantity: 2, size: { id: 229, name: '25 см' } });
-  expect(a.price).toBeCloseTo(13.5 + 3 + 0.7 + 0.5);
-  expect(cartItemOptions(a)).toBe('25 см · Бургер соус-основа · Борт: Колбаски охотничьи · Добавки: Ветчина Рубленная, Халапеньо');
+test('запрос в корзину: только id выбранного, цену считает сервер', () => {
+  const selection = {
+    ...initialSelection(pizza),
+    board1: pizza.variants[0].boards[0],
+    addons: [pizza.variants[0].addons[1], pizza.variants[0].addons[0]],
+  };
+  expect(buildCartPayload(pizza, selection, 2)).toEqual({
+    product_id: 134, variant_id: 229, board1_id: 1, board2_id: null, sauce_id: 2,
+    addon_ids: [4, 1], drink_id: null, quantity: 2,
+  });
+});
+
+test('опции позиции корзины одной строкой', () => {
+  const line = {
+    size: { name: '25 см' },
+    sauce: { name: 'Бургер соус-основа' },
+    boards: [{ name: 'Колбаски охотничьи' }],
+    addons: [{ name: 'Ветчина Рубленная (25): 0.70 руб.' }, { name: 'Халапеньо' }],
+    drink: null,
+  };
+  expect(cartItemOptions(line)).toBe('25 см · Бургер соус-основа · Борт: Колбаски охотничьи · Добавки: Ветчина Рубленная, Халапеньо');
 });
 
 test('старые позиции корзины с toppings тоже описываются', () => {

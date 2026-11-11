@@ -56,39 +56,19 @@ export const boardsAvailable = (product, variant) => !!product?.has_border && (v
 export const addonsAvailable = (product, variant) => !!product?.has_addons && (variant?.addons?.length ?? 0) > 0;
 
 /**
- * Позиция корзины. id одинаков для одинакового набора опций — тогда корзина
- * увеличивает количество, а не заводит новую строку (как ключ SessionCart на сайте).
+ * Запрос «добавить в корзину» для POST /cart/items/: только id выбранного.
+ * Цену, совпадение опций с размером и объединение одинаковых позиций делает сервер.
  */
-export const buildCartItem = (product, selection, quantity) => {
-  const { variant, sauce, board1, board2, addons, drink } = selection;
-  const addonIds = addons.map((a) => a.id).sort((a, b) => a - b);
-  const id = [
-    product.id,
-    variant?.id ?? '',
-    board1 ? `b1_${board1.id}` : '',
-    board2 ? `b2_${board2.id}` : '',
-    sauce ? `s_${sauce.id}` : '',
-    addonIds.length ? `a_${addonIds.join('_')}` : '',
-    drink ? `d_${drink.id}` : '',
-  ]
-    .filter(Boolean)
-    .join('-');
-
-  return {
-    id,
-    productId: product.id,
-    variantId: variant?.id ?? null,
-    name: product.name,
-    image: product.image ?? null,
-    price: unitPrice(selection),
-    quantity,
-    size: variant ? { id: variant.id, name: variantLabel(variant) } : null,
-    sauce: sauce ? { id: sauce.id, name: sauce.name } : null,
-    boards: [board1, board2].filter(Boolean).map((b) => ({ id: b.id, name: optionLabel(b.name), price: num(b.price) })),
-    addons: addons.map((a) => ({ id: a.id, name: optionLabel(a.name), price: num(a.price) })),
-    drink: drink ? { id: drink.id, name: drink.name } : null,
-  };
-};
+export const buildCartPayload = (product, selection, quantity) => ({
+  product_id: product.id,
+  variant_id: selection.variant?.id ?? null,
+  board1_id: selection.board1?.id ?? null,
+  board2_id: selection.board2?.id ?? null,
+  sauce_id: selection.sauce?.id ?? null,
+  addon_ids: selection.addons.map((a) => a.id),
+  drink_id: selection.drink?.id ?? null,
+  quantity,
+});
 
 /** Одна строка «32 см · Итальянский соус · Борт: … · Добавки: …» для корзины. */
 export const cartItemOptions = (item) => {

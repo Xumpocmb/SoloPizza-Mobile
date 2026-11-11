@@ -1,107 +1,78 @@
-// Корзина: полностью локальная (redux + AsyncStorage).
-// В app_api друга эндпоинтов корзины пока нет — никаких серверных вызовов,
-// иначе 404 и красные тосты LogBox. Когда появится quote_cart/order,
-// серверная синхронизация вернётся отдельным слоем.
-//
-// ВАЖНО: старый slice ожидал {productId, options} и выбрасывал name/price/image,
-// из-за чего в корзине лежали позиции без цены → краш toFixed. Теперь slice
-// принимает ГОТОВУЮ позицию {id, name, price, image, quantity, size?, toppings?}
-// и хранит её как есть (price нормализуется в число через num()).
+// Корзина на сервере (/api/v1/cart/, см. cartService). Redux хранит последний ответ
+// сервера в форме, которую уже понимают экраны: { id, name, image, price, quantity,
+// size, sauce, boards, addons, drink }. Цены и итоги — только серверные.
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import cartService, { EMPTY_CART } from '../../services/cartService';
 import { num } from '../../utils/money';
+import { apiErrorMessage } from '../../utils/apiError';
+import { optionLabel, variantLabel } from '../../utils/productOptions';
 
-const CART_STORAGE_KEY = 'cart_items';
+const option = (item) => (item ? { ...item, name: optionLabel(item.name), price: num(item.price) } : null);
 
-const readItems = async () => {
-  try {
-    const raw = await AsyncStorage.getItem(CART_STORAGE_KEY);
-    const items = raw ? JSON.parse(raw) : [];
-    return Array.isArray(items) ? items : [];
-  } catch {
-    return [];
-  }
-};
+/** Позиция ответа сервера → позиция для экранов. */
+export const fromServerLine = (line) => ({
+  id: line.id,
+  productId: line.product_id,
+  name: line.name,
+  image: line.image,
+  quantity: line.quantity,
+  price: num(line.unit_price),
+  total: num(line.total),
+  size: { id: line.variant.id, name: variantLabel(line.variant) },
+  sauce: line.sauce,
+  boards: [line.board1, line.board2].filter(Boolean).map(option),
+  addons: line.addons.map(option),
+  drink: line.drink ? { name: line.drink } : null,
+});
 
-const writeItems = async (items) => {
-  try {
-    await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  } catch {
-    // персист не критичен: состояние в redux уже обновлено
-  }
-};
+const errorMessage = (error) => apiErrorMessage(error, 'Не удалось обновить корзину');
 
-// Гидрация при старте приложения (иначе после перезапуска корзина пуста,
-// пока пользователь что-нибудь не добавит).
-export const loadCart = createAsyncThunk('cart/loadCart', async () => readItems());
+const cartThunk = (type, run) =>
+  createAsyncThunk(type, async (arg, { rejectWithValue }) => {
+    try {
+      return (await run(arg)) ?? EMPTY_CART;
+    } catch (error) {
+      return rejectWithValue(errorMessage(error));
+    }
+  });
 
-// Старое имя — оставляем алиасом, чтобы ничего не отвалилось.
+export const loadCart = cartThunk('cart/loadCart', () => cartService.get());
 export const fetchCart = loadCart;
 
-export const addToCart = createAsyncThunk('cart/addToCart', async (item = {}) => {
-  const items = await readItems();
-  const incoming = {
-    ...item,
-    id: item.id ?? item.productId ?? `item_${Date.now()}`,
-    productId: item.productId ?? item.id,
-    price: num(item.price),
-    quantity: num(item.quantity) || 1,
-  };
-  const idx = items.findIndex((i) => String(i.id) === String(incoming.id));
-  let next;
-  if (idx >= 0) {
-    next = items.map((i, n) =>
-      n === idx ? { ...i, ...incoming, quantity: num(i.quantity) + incoming.quantity } : i,
-    );
-  } else {
-    next = [...items, incoming];
-  }
-  await writeItems(next);
-  return next;
-});
+/** payload из buildCartPayload: только id выбранных опций и количество. */
+export const addToCart = cartThunk('cart/addToCart', (payload) => cartService.addItem(payload));
 
-export const removeFromCart = createAsyncThunk('cart/removeFromCart', async (arg) => {
-  // Совместимость: вызывают и removeFromCart(id), и removeFromCart({itemId})
-  const id = arg && typeof arg === 'object' ? arg.itemId : arg;
-  const items = (await readItems()).filter((i) => String(i.id) !== String(id));
-  await writeItems(items);
-  return items;
-});
-
-export const updateCartItemQuantity = createAsyncThunk(
-  'cart/updateCartItemQuantity',
-  async ({ itemId, quantity }) => {
-    const current = await readItems();
-    const qty = num(quantity);
-    const items =
-      qty <= 0
-        ? current.filter((i) => String(i.id) !== String(itemId))
-        : current.map((i) => (String(i.id) === String(itemId) ? { ...i, quantity: qty } : i));
-    await writeItems(items);
-    return items;
-  },
+export const updateCartItemQuantity = cartThunk('cart/updateCartItemQuantity', ({ itemId, quantity }) =>
+  num(quantity) <= 0 ? cartService.removeItem(itemId) : cartService.setQuantity(itemId, num(quantity)),
 );
 
-export const clearCart = createAsyncThunk('cart/clearCart', async () => {
-  await AsyncStorage.removeItem(CART_STORAGE_KEY);
-  return [];
-});
+export const removeFromCart = cartThunk('cart/removeFromCart', (arg) =>
+  cartService.removeItem(arg && typeof arg === 'object' ? arg.itemId : arg),
+);
+
+export const clearCart = cartThunk('cart/clearCart', () => cartService.clear());
+
+/** Смена филиала: сервер очищает корзину (как select_branch на сайте). */
+export const changeCartBranch = cartThunk('cart/changeCartBranch', (branchId) => cartService.changeBranch(branchId));
 
 const initialState = {
   items: [],
-  total: 0,
-  totalAmount: 0,
   itemsCount: 0,
+  totalAmount: 0,
+  total: 0,
+  branchId: null,
   isLoading: false,
   error: null,
 };
 
-// Единый пересчёт итогов: цены с сервера приходят строками ("12.50") — num().
-const applyItems = (state, items) => {
-  state.items = items;
-  state.totalAmount = items.reduce((s, i) => s + num(i.price) * num(i.quantity), 0);
+const applyCart = (state, cart) => {
+  state.items = (cart.items || []).map(fromServerLine);
+  state.itemsCount = cart.items_count || 0;
+  state.totalAmount = num(cart.subtotal);
   state.total = state.totalAmount;
-  state.itemsCount = items.reduce((s, i) => s + num(i.quantity), 0);
+  state.branchId = cart.branch_id ?? null;
+  state.isLoading = false;
+  state.error = null;
 };
 
 const cartSlice = createSlice({
@@ -113,31 +84,18 @@ const cartSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder
-      .addCase(loadCart.pending, (state) => {
-        state.isLoading = true;
-      })
-      .addCase(loadCart.fulfilled, (state, action) => {
-        state.isLoading = false;
-        applyItems(state, action.payload || []);
-      })
-      .addCase(loadCart.rejected, (state) => {
-        state.isLoading = false;
-      })
-      .addCase(addToCart.fulfilled, (state, action) => {
-        applyItems(state, action.payload || []);
-      })
-      .addCase(removeFromCart.fulfilled, (state, action) => {
-        applyItems(state, action.payload || []);
-      })
-      .addCase(updateCartItemQuantity.fulfilled, (state, action) => {
-        applyItems(state, action.payload || []);
-      })
-      .addCase(clearCart.fulfilled, (state) => {
-        applyItems(state, []);
-      });
-    // rejected-ветки намеренно тихие: корзина локальная, падать нечему,
-    // а красные тосты LogBox уже стоили нам нервов.
+    const thunks = [loadCart, addToCart, updateCartItemQuantity, removeFromCart, clearCart, changeCartBranch];
+    thunks.forEach((thunk) => {
+      builder
+        .addCase(thunk.pending, (state) => {
+          state.isLoading = true;
+        })
+        .addCase(thunk.fulfilled, (state, action) => applyCart(state, action.payload))
+        .addCase(thunk.rejected, (state, action) => {
+          state.isLoading = false;
+          state.error = action.payload;
+        });
+    });
   },
 });
 
