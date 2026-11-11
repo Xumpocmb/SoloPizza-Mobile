@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // ИСПРАВЛЕНО ПРИ АУДИТЕ: прямой импорт react-native-vector-icons в v10.x
 // не тянет шрифт — иконки рендерились пустыми квадратами.
 import Icon from '../components/ui/Icon';
+import { cartItemOptions } from '../utils/productOptions';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   updateCartItemQuantity,
@@ -39,10 +40,6 @@ const CartScreen = ({ navigation }) => {
   const cartItems = items; // единственный источник — redux cartSlice (persist в AsyncStorage)
   const [cartSummary, setCartSummary] = useState({ total: 0, discount: 0, delivery: 0 });
   const [updating, setUpdating] = useState(false);
-
-  useEffect(() => {
-    loadCart();
-  }, []);
 
   const loadCart = async () => {
     // Корзина локальная (redux + AsyncStorage): в app_api друга эндпоинтов
@@ -242,18 +239,9 @@ const CartScreen = ({ navigation }) => {
             {item.name || item.product?.name || 'Товар'}
           </Text>
           
-          {/* Размер */}
-          {item.size && (
-            <Text style={styles.itemOption}>
-              Размер: {item.size.name} ({item.size.size})
-            </Text>
-          )}
-          
-          {/* Добавки */}
-          {item.toppings && item.toppings.length > 0 && (
-            <Text style={styles.itemOption}>
-              Добавки: {item.toppings.map(topping => topping.name).join(', ')}
-            </Text>
+          {/* Размер, соус, борты, добавки, напиток */}
+          {!!cartItemOptions(item) && (
+            <Text style={styles.itemOption}>{cartItemOptions(item)}</Text>
           )}
           
           <View style={styles.itemFooter}>
@@ -326,6 +314,10 @@ const CartScreen = ({ navigation }) => {
       </View>
     </View>
   );
+
+  useEffect(() => {
+    loadCart();
+  }, []);
 
   return (
     <View style={styles.container}>

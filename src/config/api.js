@@ -24,6 +24,10 @@ export const API_BASE_URL =
 // Когда страховка станет не нужна — поставить false и удалить demoCatalog.js.
 export const USE_DEMO_FALLBACK = true;
 
+// Политика обработки персональных данных на сайте: ссылка у галочек согласия
+// и в магазинах приложений
+export const PRIVACY_URL = 'https://solo-pizza.by/privacy/';
+
 // ПРОМО/АКЦИИ. На 02.11.2026 эндпоинта акций на бэкенде НЕТ (путь /promo/active/
 // отдавал 404). Согласованный путь будущего эндпоинта — '/promos/active/'
 // (спека app_api v2: spec-app-api-v2-orders-cart-auth.md в репо памяти).
@@ -62,6 +66,8 @@ export const API_ENDPOINTS = {
   CATALOG: {
     META: '/meta/',
     BRANCHES: '/branches/',
+    CONTACTS: '/contacts/',
+    ANNOUNCEMENTS: '/announcements/',
     CATEGORIES: '/categories/',
     CATEGORY_DETAIL: (slug) => `/categories/${slug}/`,
     PRODUCTS: '/products/',
@@ -72,33 +78,7 @@ export const API_ENDPOINTS = {
     WEEKLY_SPECIAL: '/products/weekly-special/',
   },
 
-  // Cart
-  CART: {
-    ITEMS: '/cart/items/',
-    ITEM_DETAIL: (id) => `/cart/items/${id}/`,
-    SUMMARY: '/cart/summary/',
-    // ↓ ДОБАВЛЕНО ПРИ АУДИТЕ: cartService.js обращался к этим ключам,
-    //   но их не было → API_ENDPOINTS.CART.ADD === undefined → TypeError.
-    ADD: '/cart/add/',
-    UPDATE: (id) => `/cart/update/${id}/`,
-    REMOVE: (id) => `/cart/remove/${id}/`,
-    CLEAR: '/cart/clear/',
-    PROMO: '/cart/promo/',
-  },
-
-  // Orders
-  // ⚠️ ВНИМАНИЕ: в проекте было ДВЕ несовместимые группы —
-  //    `ORDER` (определена) и `ORDERS` (использовалась в orderService.js,
-  //    но не существовала → 18 обращений к undefined → TypeError).
-  //    Оставлены обе: ORDER — для обратной совместимости, ORDERS — рабочая.
-  //    После стабилизации ORDER нужно удалить и оставить только ORDERS.
-  ORDER: {
-    LIST: '/order/',
-    DETAIL: (id) => `/order/${id}/`,
-    CREATE: '/order/create/',
-    STATUS: (id) => `/order/${id}/status/`,
-  },
-
+  // Корзина и заказы приложения появятся в app_api — см. PLAN-orders-auth.md
   ORDERS: {
     LIST: '/orders/',
     DETAIL: (id) => `/orders/${id}/`,

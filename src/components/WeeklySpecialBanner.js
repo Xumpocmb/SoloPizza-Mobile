@@ -67,7 +67,7 @@ const WeeklySpecialBanner = ({ product, onAdd, onPress }) => {
               onPress={onAdd}
               accessibilityLabel="Добавить пиццу недели в корзину"
             >
-              <Text style={styles.buttonText}>В корзину</Text>
+              <Text style={styles.buttonText}>Выбрать</Text>
             </TouchableOpacity>
           ) : null}
         </View>

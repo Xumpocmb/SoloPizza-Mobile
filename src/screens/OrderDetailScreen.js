@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
-  Linking,
 } from 'react-native';
 import Alert from '../utils/alertShim';
 import useAppTheme from '../theme/useAppTheme';
@@ -26,11 +25,6 @@ const OrderDetailScreen = ({ route, navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [tracking, setTracking] = useState(null);
   const [cancelling, setCancelling] = useState(false);
-
-  useEffect(() => {
-    dispatch(fetchOrderDetail(orderId));
-    loadTrackingData();
-  }, [dispatch, orderId]);
 
   const loadTrackingData = async () => {
     try {
@@ -113,8 +107,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
   };
 
   const handleCallSupport = () => {
-    const phoneNumber = '+375291234567';
-    Linking.openURL(`tel:${phoneNumber}`);
+    navigation.navigate('Contacts');
   };
 
   const getStatusColor = (status) => {
@@ -196,6 +189,11 @@ const OrderDetailScreen = ({ route, navigation }) => {
       </View>
     </View>
   );
+
+  useEffect(() => {
+    dispatch(fetchOrderDetail(orderId));
+    loadTrackingData();
+  }, [dispatch, orderId]);
 
   if (isLoading) {
     return (

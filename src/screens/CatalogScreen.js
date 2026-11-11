@@ -10,19 +10,19 @@ import {
   RefreshControl,
   Platform,
 } from 'react-native';
-import Alert from '../utils/alertShim';
+import { num } from '../utils/money';
 import ProductImage from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, fetchCategories } from '../store/slices/productSlice';
-import { addToCart } from '../store/slices/cartSlice';
 import DemoBanner from '../components/ui/DemoBanner';
+import BranchPicker from '../components/BranchPicker';
 import useAppTheme from '../theme/useAppTheme';
 
 const CatalogScreen = ({ navigation }) => {
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
-  const { products, categories, loading, error } = useSelector(state => state.products);
+  const { products, categories, loading, error, branchId } = useSelector(state => state.products);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -31,22 +31,6 @@ const CatalogScreen = ({ navigation }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      loadData(true);
-    }, 500);
-    
-    return () => clearTimeout(delayedSearch);
-  }, [selectedCategory, searchQuery]);
-
-  useEffect(() => {
-    filterProducts();
-  }, [products, selectedCategory, searchQuery]);
 
   const loadData = async (reset = true, force = false) => {
     try {
@@ -98,15 +82,9 @@ const CatalogScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
+  // Размер, соус и добавки выбираются в карточке: без варианта заказ не оформить
   const handleAddToCart = (product) => {
-    dispatch(addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      quantity: 1
-    }));
-    Alert.alert('Успешно', `${product.name} добавлен в корзину`);
+    navigation.navigate('ProductDetail', { productId: product.id });
   };
 
   const filterProducts = () => {
@@ -168,7 +146,7 @@ const CatalogScreen = ({ navigation }) => {
           {item.description || item.short_description || 'Описание товара'}
         </Text>
         <View style={styles.productFooter}>
-          <Text style={styles.productPrice}>{item.price || item.base_price} ₽</Text>
+          <Text style={styles.productPrice}>{num(item.price ?? item.base_price).toFixed(2)} BYN</Text>
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => handleAddToCart(item)}
@@ -180,6 +158,23 @@ const CatalogScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+
+  // Меню зависит от филиала: при смене перезагружаем каталог
+  useEffect(() => {
+    loadData();
+  }, [branchId]);
+
+  useEffect(() => {
+    filterProducts();
+  }, [products, selectedCategory, searchQuery]);
+
+  useEffect(() => {
+    const delayedSearch = setTimeout(() => {
+      loadData(true);
+    }, 500);
+    
+    return () => clearTimeout(delayedSearch);
+  }, [selectedCategory, searchQuery]);
 
   if (loading && !refreshing) {
     return (
@@ -204,6 +199,7 @@ const CatalogScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <DemoBanner />
+      <BranchPicker />
 
       {/* Поиск */}
       <View style={styles.searchContainer}>

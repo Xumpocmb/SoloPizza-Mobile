@@ -14,9 +14,9 @@ import {
 import ProductImage, { CATEGORY_GLYPHS } from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchFeaturedProducts, fetchCategories } from '../store/slices/productSlice';
-import { addToCart } from '../store/slices/cartSlice';
 import { catalogService, productService, promoService, vacancyService } from '../services';
 import DemoBanner from '../components/ui/DemoBanner';
+import BranchPicker from '../components/BranchPicker';
 import WeeklySpecialBanner from '../components/WeeklySpecialBanner';
 import useAppTheme from '../theme/useAppTheme';
 import { num } from '../utils/money';
@@ -27,7 +27,7 @@ const HomeScreen = ({ navigation }) => {
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
-  const { featuredProducts, categories, loading } = useSelector(state => state.products);
+  const { featuredProducts, categories, loading, branchId } = useSelector(state => state.products);
   
   const [refreshing, setRefreshing] = useState(false);
   const [bannerIndex, setBannerIndex] = useState(0);
@@ -35,6 +35,7 @@ const HomeScreen = ({ navigation }) => {
   const [apiProducts, setApiProducts] = useState([]);
   const [weekly, setWeekly] = useState(null);
   const [vacancies, setVacancies] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
   const [banners, setBanners] = useState([
     {
       id: 1,
@@ -58,14 +59,9 @@ const HomeScreen = ({ navigation }) => {
 
 
 
-  useEffect(() => {
-    loadData();
-    loadApiData();
-  }, []);
-
   const loadApiData = async (force = false) => {
     try {
-      const [categoriesData, productsData, promosData, weeklyData, vacanciesData] = await Promise.all([
+      const [categoriesData, productsData, promosData, weeklyData, vacanciesData, announcementsData] = await Promise.all([
         catalogService.getCategories({ force }),
         productService.getPopularProducts({ limit: 6, force }),
         promoService.getActivePromos(),
@@ -73,9 +69,12 @@ const HomeScreen = ({ navigation }) => {
         catalogService.getWeeklySpecial({ force }),
         // v1.1: вакансии — блок главной страницы, как на сайте друга
         vacancyService.getVacancies(),
+        // объявления из админки сайта (бывшая бегущая строка); пусто — блока нет
+        catalogService.getAnnouncements({ force }),
       ]);
       setWeekly(weeklyData || null);
       setVacancies(Array.isArray(vacanciesData) ? vacanciesData : []);
+      setAnnouncements(announcementsData);
       
       setApiCategories(categoriesData.results || categoriesData || []);
       setApiProducts(productsData.results || productsData || []);
@@ -123,14 +122,9 @@ const HomeScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
+  // Размер, соус и добавки выбираются в карточке: без варианта заказ не оформить
   const handleAddToCart = (product) => {
-    dispatch(addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      quantity: 1
-    }));
+    navigation.navigate('ProductDetail', { productId: product.id });
   };
 
   const navigateToCategory = (category) => {
@@ -185,6 +179,12 @@ const HomeScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  // Меню зависит от филиала: при смене перезагружаем главную
+  useEffect(() => {
+    loadData();
+    loadApiData();
+  }, [branchId]);
+
   if (loading && !featuredProducts?.length && !categories?.length) {
     return (
       <View style={styles.loadingContainer}>
@@ -202,7 +202,12 @@ const HomeScreen = ({ navigation }) => {
       }
     >
       <DemoBanner />
-
+      <BranchPicker />
+      {announcements.map((item) => (
+        <View key={item.id} style={styles.announcement}>
+          <Text style={styles.announcementText}>{item.text}</Text>
+        </View>
+      ))}
 
       {/* Featured Products Section */}
       <View style={styles.section}>
@@ -370,6 +375,17 @@ const makeStyles = (colors) => StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.cardBg,
     marginHorizontal: 4,
+  },
+  announcement: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: colors.accentRgba,
+  },
+  announcementText: {
+    fontSize: 15,
+    color: colors.text,
   },
   section: {
     marginHorizontal: 20,

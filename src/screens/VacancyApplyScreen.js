@@ -17,9 +17,11 @@ import {
   ScrollView,
   StyleSheet,
   KeyboardAvoidingView,
+  Linking,
   Platform,
 } from 'react-native';
 import { vacancyService } from '../services';
+import { PRIVACY_URL } from '../config/api';
 import Alert from '../utils/alertShim';
 import useAppTheme from '../theme/useAppTheme';
 
@@ -42,6 +44,7 @@ const VacancyApplyScreen = ({ route, navigation }) => {
     work_experience: '',
   });
   const [errors, setErrors] = useState({});
+  const [consent, setConsent] = useState(false);
   const [sending, setSending] = useState(false);
 
   const setField = (key, value) => {
@@ -67,6 +70,8 @@ const VacancyApplyScreen = ({ route, navigation }) => {
       next.experience_years = `Стаж: целое число от ${EXP_MIN} до ${EXP_MAX}`;
     }
     if (!form.work_experience.trim()) next.work_experience = 'Расскажите об опыте';
+    // Закон РБ о защите персональных данных: ФИО, возраст и телефон — только с согласия
+    if (!consent) next.consent = 'Нужно согласие на обработку персональных данных';
     return next;
   };
 
@@ -152,6 +157,27 @@ const VacancyApplyScreen = ({ route, navigation }) => {
           ) : null}
         </View>
         <TouchableOpacity
+          style={styles.consentRow}
+          onPress={() => {
+            setConsent(!consent);
+            if (errors.consent) setErrors((prev) => ({ ...prev, consent: null }));
+          }}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: consent }}
+          disabled={sending}
+        >
+          <View style={[styles.checkbox, consent && styles.checkboxOn, errors.consent && styles.inputError]}>
+            {consent ? <Text style={styles.checkmark}>✓</Text> : null}
+          </View>
+          <Text style={styles.consentText}>
+            Согласен(на) на обработку персональных данных в соответствии с{' '}
+            <Text style={styles.link} onPress={() => Linking.openURL(PRIVACY_URL)}>
+              политикой обработки персональных данных
+            </Text>
+          </Text>
+        </TouchableOpacity>
+        {errors.consent ? <Text style={styles.errorText}>{errors.consent}</Text> : null}
+        <TouchableOpacity
           style={[styles.submitButton, sending && styles.submitDisabled]}
           onPress={submit}
           disabled={sending}
@@ -193,6 +219,20 @@ const makeStyles = (colors) =>
       marginTop: 6,
     },
     submitDisabled: { opacity: 0.6 },
+    consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 6 },
+    checkbox: {
+      width: 24,
+      height: 24,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: colors.divider,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+    checkmark: { color: colors.buttonText, fontWeight: '700' },
+    consentText: { flex: 1, fontSize: 14, color: colors.text },
+    link: { color: colors.accent, textDecorationLine: 'underline' },
     submitText: { color: colors.buttonText, fontSize: 16, fontWeight: '700' },
   });
 

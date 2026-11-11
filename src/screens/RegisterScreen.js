@@ -9,12 +9,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Linking,
 } from 'react-native';
 import Alert from '../utils/alertShim';
 import useAppTheme from '../theme/useAppTheme';
 import { useDispatch, useSelector } from 'react-redux';
 import { registerUser, clearError } from '../store/slices/authSlice';
 import { authService } from '../services';
+import { PRIVACY_URL } from '../config/api';
 
 const RegisterScreen = ({ navigation }) => {
   const { colors } = useAppTheme();
@@ -179,11 +181,7 @@ const RegisterScreen = ({ navigation }) => {
   };
 
   const handleTermsPress = () => {
-    Alert.alert(
-      'Условия использования',
-      'Здесь будут отображены условия использования приложения SoloPizza.',
-      [{ text: 'OK' }]
-    );
+    Linking.openURL(PRIVACY_URL);
   };
 
   return (

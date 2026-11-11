@@ -160,6 +160,25 @@ class CatalogService {
     return this._cached('branches', () => this._request(API_ENDPOINTS.CATALOG.BRANCHES), options);
   }
 
+  /** Филиалы с адресами и телефонами ({ number, dial }) + Instagram — экран «Контакты». */
+  async getContacts(options) {
+    return this._cached('contacts', () => this._request(API_ENDPOINTS.CATALOG.CONTACTS), options);
+  }
+
+  /** Активные объявления из админки сайта: [{ id, text }], пустой список — блока нет. */
+  async getAnnouncements(options) {
+    try {
+      const items = await this._cached(
+        'announcements',
+        () => this._request(API_ENDPOINTS.CATALOG.ANNOUNCEMENTS),
+        options,
+      );
+      return Array.isArray(items) ? items : [];
+    } catch {
+      return [];
+    }
+  }
+
   /** branch_id из meta.default_branch_id; дёшево, кэшируется и дедуплицируется. */
   async ensureBranchId(options) {
     if (this.branchId !== null) return this.branchId;
