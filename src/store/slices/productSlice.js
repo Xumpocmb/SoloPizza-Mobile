@@ -49,16 +49,15 @@ export const fetchCategories = createAsyncThunk(
 
 /**
  * Общий список товаров.
- * @param {{categoryId?: number, search?: string, page?: number}} [params]
+ * @param {{categoryId?: number, page?: number}} [params]
  */
 export const fetchProducts = createAsyncThunk(
   'products/fetchProducts',
   async (params = {}, { rejectWithValue }) => {
-    const { categoryId, search, page = 1, force } = params || {};
+    const { categoryId, page = 1, force } = params || {};
     try {
       const payload = await catalogService.getProducts({
         category: categoryId,
-        search,
         page,
         force,
       });
@@ -186,7 +185,6 @@ const initialState = {
   hasNext: false,
   hasPrevious: false,
   selectedCategory: null,
-  searchQuery: '',
   // Экраны деструктуризируют поле `loading` (не `isLoading`)
   loading: false,
   loadingProduct: false,
@@ -199,10 +197,6 @@ const productSlice = createSlice({
   reducers: {
     setSelectedCategory: (state, action) => {
       state.selectedCategory = action.payload;
-      state.currentPage = 1;
-    },
-    setSearchQuery: (state, action) => {
-      state.searchQuery = action.payload;
       state.currentPage = 1;
     },
     clearCurrentProduct: (state) => {
@@ -302,7 +296,6 @@ const productSlice = createSlice({
 
 export const {
   setSelectedCategory,
-  setSearchQuery,
   clearCurrentProduct,
   clearProductsError,
 } = productSlice.actions;

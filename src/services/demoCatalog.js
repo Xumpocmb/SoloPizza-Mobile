@@ -190,7 +190,7 @@ function categoryWithCount(slug) {
 /**
  * Мини-роутер по путям app_api. Возвращает данные той же формы, что реальный API.
  * @param {string} path  путь из API_ENDPOINTS.CATALOG (без query)
- * @param {object} params query-параметры ({ branch_id, category, search })
+ * @param {object} params query-параметры ({ branch_id, category })
  * @param {string} [slugParam] slug для detail-эндпоинтов
  */
 export function resolveDemo(path, params = {}, slugParam = null) {
@@ -213,12 +213,6 @@ export function resolveDemo(path, params = {}, slugParam = null) {
   if (path.endsWith('/products/') && !slugParam) {
     let items = PRODUCTS;
     if (params.category) items = items.filter((p) => p.category === params.category);
-    if (params.search) {
-      const q = String(params.search).toLowerCase();
-      items = items.filter(
-        (p) => p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q),
-      );
-    }
     return items.map(listItem);
   }
 

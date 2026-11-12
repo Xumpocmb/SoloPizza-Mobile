@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator,
   RefreshControl,
   Platform,
@@ -24,7 +23,6 @@ const CatalogScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { products, categories, loading, error, branchId } = useSelector(state => state.products);
   
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -43,12 +41,11 @@ const CatalogScreen = ({ navigation }) => {
       
       const [categoriesResponse] = await Promise.all([
         dispatch(fetchCategories(force)).unwrap(),
-        // список тянем сразу с серверным фильтром категории и локальным поиском;
+        // список тянем сразу с серверным фильтром категории;
         // контракт app_api не отдаёт поле category в товаре, поэтому клиентская
         // фильтрация по категории невозможна — только серверный параметр
         dispatch(fetchProducts({
           categoryId: selectedCategory?.id !== 'all' ? selectedCategory?.id : undefined,
-          search: searchQuery || undefined,
           force,
         })).unwrap(),
       ]);
@@ -90,17 +87,9 @@ const CatalogScreen = ({ navigation }) => {
   const filterProducts = () => {
     let filtered = [...products];
 
-    // Фильтрация по поиску
-    if (searchQuery) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
-
     // Фильтрация по категории НЕ делается локально: контракт app_api не отдаёт
     // поле category в списке товаров, категорию фильтрует сервер по query-параметру
-    // (getProducts({ category }) в catalogService). Локально оставляем поиск и сортировку.
+    // (getProducts({ category }) в catalogService). Поиска в приложении нет (решение владельца).
 
     // Сортировки нет намеренно: порядок задаёт сервер
     // (app_api: category__order, name). Убрана по решению пользователя.
@@ -166,15 +155,11 @@ const CatalogScreen = ({ navigation }) => {
 
   useEffect(() => {
     filterProducts();
-  }, [products, selectedCategory, searchQuery]);
+  }, [products, selectedCategory]);
 
   useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      loadData(true);
-    }, 500);
-    
-    return () => clearTimeout(delayedSearch);
-  }, [selectedCategory, searchQuery]);
+    loadData(true);
+  }, [selectedCategory]);
 
   if (loading && !refreshing) {
     return (
@@ -200,17 +185,6 @@ const CatalogScreen = ({ navigation }) => {
     <View style={styles.container}>
       <DemoBanner />
       <BranchPicker />
-
-      {/* Поиск */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Поиск товаров..."
-          placeholderTextColor={colors.textMuted}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
 
       {/* Категории */}
       {categories.length > 0 && (
@@ -302,22 +276,6 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.buttonText,
     fontSize: 16,
     fontWeight: '600',
-  },
-  searchContainer: {
-    padding: 15,
-    backgroundColor: colors.cardBg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  searchInput: {
-    color: colors.text,
-    backgroundColor: colors.bg,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: colors.divider,
   },
   categoriesContainer: {
     backgroundColor: colors.cardBg,

@@ -26,7 +26,14 @@ import {
   buildCartPayload,
 } from '../utils/productOptions';
 
-const MAX_QUANTITY = 10; // как на сайте (AddToCartForm)
+const MAX_QUANTITY = 10;
+
+/** «Креветка\nКурица\n…» → «Креветка, Курица, …» */
+export const compactDescription = (text) =>
+  String(text)
+    .split(/\s*[\r\n]+\s*/)
+    .filter(Boolean)
+    .join(', '); // как на сайте (AddToCartForm)
 
 const Chip = ({ styles, active, label, price, onPress }) => (
   <TouchableOpacity
@@ -151,7 +158,8 @@ const ProductDetailScreen = ({ route, navigation }) => {
         <View style={styles.productInfo}>
           <Text style={styles.productName}>{product.name}</Text>
           {!!product.description && (
-            <Text style={styles.productDescription}>{product.description}</Text>
+            // на сайте состав набран столбиком — на телефоне он занимал весь экран и прятал выбор размера
+            <Text style={styles.productDescription}>{compactDescription(product.description)}</Text>
           )}
         </View>
 
@@ -316,25 +324,25 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   productImage: {
     width: '100%',
-    height: 300,
+    height: 220,
   },
   productInfo: {
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     backgroundColor: colors.cardBg,
     marginBottom: 8,
   },
   productName: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 12,
-    lineHeight: 34,
+    marginBottom: 6,
+    lineHeight: 30,
   },
   productDescription: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textMuted,
-    lineHeight: 24,
-    marginBottom: 16,
+    lineHeight: 21,
   },
   basePrice: {
     fontSize: 20,

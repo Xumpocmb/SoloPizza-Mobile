@@ -21,7 +21,7 @@ import catalogService from './catalogService';
 const productService = {
   /**
    * Список товаров.
-   * @param {{category?: number, search?: string, page?: number, limit?: number, sort?: string}} [params]
+   * @param {{category?: number, page?: number, limit?: number, sort?: string}} [params]
    */
   async getProducts(params = {}) {
     return catalogService.getProducts(params);
@@ -72,11 +72,6 @@ const productService = {
   /** Варианты товара (размер + тесто + цена). */
   async getProductVariants(productId) {
     return catalogService.getProductVariants({ product: productId });
-  },
-
-  /** Поиск по каталогу. */
-  async searchProducts(query, params = {}) {
-    return catalogService.searchProducts(query, params);
   },
 
   /** Метаданные API: валюта, таймзона, филиал по умолчанию (app_api /meta/). */

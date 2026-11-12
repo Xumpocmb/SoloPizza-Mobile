@@ -34,7 +34,7 @@
  *  - force=true — обход кэша для pull-to-refresh;
  *  - демо-ответы НЕ кэшируются: как только сервер оживает, следующий запрос
  *    обязан уйти в сеть, а не отдать прошлогоднее демо.
- * Фильтрованные запросы (category/search) кэш не используют: список под фильтр
+ * Запросы с фильтром категории кэш не используют: список под фильтр
  * всегда свежий.
  */
 
@@ -213,12 +213,11 @@ class CatalogService {
 
   /** category в фильтрах принимается и как slug, и как id (экраны шлют id). */
   async getProducts(filters = {}) {
-    const { category, search, force } = filters || {};
+    const { category, force } = filters || {};
     const branchId = await this.ensureBranchId({ force });
     const params = { branch_id: branchId };
 
     const hasCategory = category !== undefined && category !== null && category !== '';
-    const hasSearch = search !== undefined && search !== null && search !== '';
 
     if (hasCategory) {
       // id категории приходим с экрана; slug берём из кэша категорий,
@@ -230,9 +229,7 @@ class CatalogService {
       params.category = this._categorySlug(category);
     }
 
-    // Серверного поиска нет: список тянем с серверным фильтром категории,
-    // а строку поиска фильтруем локально по name/description.
-    const cacheable = !hasCategory && !hasSearch;
+    const cacheable = !hasCategory;
     const products = cacheable
       ? await this._cached(
           `products:${branchId}`,
@@ -241,15 +238,7 @@ class CatalogService {
         )
       : await this._request(API_ENDPOINTS.CATALOG.PRODUCTS, params);
 
-    let items = Array.isArray(products) ? products : [];
-    if (hasSearch) {
-      const q = String(search).toLowerCase();
-      items = items.filter(
-        (p) =>
-          (p.name || '').toLowerCase().includes(q) ||
-          (p.description || '').toLowerCase().includes(q),
-      );
-    }
+    const items = Array.isArray(products) ? products : [];
 
     // полный список держим для маппинга id→slug в карточке товара;
     // фильтрованные выдачи его не перетирают
@@ -365,10 +354,6 @@ class CatalogService {
     } catch (error) {
       return null;
     }
-  }
-
-  async searchProducts(query, filters = {}) {
-    return this.getProducts({ ...filters, search: query });
   }
 
   // ── внутренние хелперы ────────────────────────────────────────

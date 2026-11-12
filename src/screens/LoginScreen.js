@@ -16,7 +16,10 @@ import useAppTheme from '../theme/useAppTheme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // ИСПРАВЛЕНО ПРИ АУДИТЕ: прямой импорт react-native-vector-icons в v10.x
 // не тянет шрифт — иконки рендерились пустыми квадратами.
+import { useDispatch } from 'react-redux';
 import { authService } from '../services';
+import { loadStoredTokens } from '../store/slices/authSlice';
+import { loadCart } from '../store/slices/cartSlice';
 
 const LoginScreen = ({ navigation }) => {
   const { colors } = useAppTheme();
@@ -27,6 +30,23 @@ const LoginScreen = ({ navigation }) => {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [devToken, setDevToken] = useState('');
+  const dispatch = useDispatch();
+
+  const handleDevTokenLogin = async () => {
+    setLoading(true);
+    try {
+      await authService.loginWithRefreshToken(devToken.trim());
+      await dispatch(loadStoredTokens());
+      dispatch(loadCart()); // с JWT сервер отдаёт корзину пользователя, а не гостевую
+      setDevToken('');
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('Не удалось войти по токену', error?.message || 'Токен недействителен или уже использован');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -250,12 +270,67 @@ const LoginScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Только для разработки: вход тестовым refresh-токеном, пока нет входа через Google/Apple.
+            __DEV__ = false в сборках для магазинов — блока там нет. */}
+        {__DEV__ && (
+          <View style={styles.devSection}>
+            <Text style={styles.devTitle}>Для разработки: вход по токену</Text>
+            <TextInput
+              style={styles.devInput}
+              placeholder="refresh-токен тестового пользователя"
+              placeholderTextColor={colors.textMuted}
+              value={devToken}
+              onChangeText={setDevToken}
+              autoCapitalize="none"
+              autoCorrect={false}
+              secureTextEntry
+            />
+            <TouchableOpacity style={styles.devButton} onPress={handleDevTokenLogin} disabled={loading || !devToken.trim()}>
+              <Text style={styles.devButtonText}>Войти по токену</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
 
 const makeStyles = (colors) => StyleSheet.create({
+  devSection: {
+    marginTop: 24,
+    padding: 16,
+    gap: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.textMuted,
+  },
+  devTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  devInput: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: colors.text,
+    backgroundColor: colors.cardBg,
+  },
+  devButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: colors.textMuted,
+  },
+  devButtonText: {
+    fontWeight: '600',
+    color: colors.buttonText,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.bg,
