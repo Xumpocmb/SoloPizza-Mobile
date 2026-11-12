@@ -171,7 +171,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
                 <Chip
                   key={v.id}
                   styles={styles}
-                  label={`${variantLabel(v)} — ${num(v.price).toFixed(2)} BYN`}
+                  label={variantLabel(v)}
                   active={variant.id === v.id}
                   onPress={() => setSelection(withVariant(selection, v))}
                 />
