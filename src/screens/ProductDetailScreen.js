@@ -156,7 +156,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
     try {
       await dispatch(addToCart(buildCartPayload(product, selection, quantity))).unwrap();
       // не модальный диалог: плашка сама пропадает, покупку не прерывает
-      setToast(`${product.name} — в корзине`);
+      setToast(`${product.name} добавлен в корзину`);
       clearTimeout(toastTimer.current);
       toastTimer.current = setTimeout(() => setToast(null), 2500);
     } catch (message) {
