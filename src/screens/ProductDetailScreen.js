@@ -497,14 +497,19 @@ const makeStyles = (colors) => StyleSheet.create({
   optionPriceActive: {
     color: colors.buttonText,
   },
+  // сетка 2 в ряд
   addonsContainer: {
-    gap: 8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 8,
   },
   addonItem: {
+    width: '48.5%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 10,
     backgroundColor: colors.cardBg,
     borderRadius: 14,
@@ -522,12 +527,10 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   addonInfo: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginRight: 6,
   },
   addonName: {
-    flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
   },
@@ -537,15 +540,15 @@ const makeStyles = (colors) => StyleSheet.create({
   addonPrice: {
     fontSize: 14,
     color: colors.textMuted,
-    marginHorizontal: 10,
+    marginTop: 2,
     fontWeight: '500',
   },
   addonPriceActive: {
     color: colors.accent,
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
     borderRadius: 6,
     borderWidth: 2,
     borderColor: colors.divider,
