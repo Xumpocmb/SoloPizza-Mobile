@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -100,6 +100,9 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
 
   useEffect(() => {
     let active = true;
@@ -151,10 +154,10 @@ const ProductDetailScreen = ({ route, navigation }) => {
     setAdding(true);
     try {
       await dispatch(addToCart(buildCartPayload(product, selection, quantity))).unwrap();
-      Alert.alert('Добавлено в корзину', `${product.name} — в корзине`, [
-        { text: 'Продолжить покупки', style: 'cancel' },
-        { text: 'Перейти в корзину', onPress: () => navigation.navigate('Cart') },
-      ]);
+      // не модальный диалог: плашка сама пропадает, покупку не прерывает
+      setToast(`${product.name} — в корзине`);
+      clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => setToast(null), 2500);
     } catch (message) {
       // сервер объясняет, что не так: товар не в этом филиале, борт не того размера и т.п.
       Alert.alert('Не удалось добавить', String(message));
@@ -311,6 +314,16 @@ const ProductDetailScreen = ({ route, navigation }) => {
           </View>
         </View>
       </ScrollView>
+
+      {toast && (
+        <View style={styles.toast} accessibilityLiveRegion="polite">
+          <Icon name="check-circle" size={20} color={colors.accent} />
+          <Text style={styles.toastText} numberOfLines={1}>{toast}</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Cart')} accessibilityRole="button">
+            <Text style={styles.toastLink}>В корзину</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.bottomPanel}>
         <View style={styles.priceContainer}>
@@ -605,6 +618,33 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.textMuted,
+  },
+  toast: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 120,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: colors.headerBg,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    elevation: 10,
+    zIndex: 10,
+  },
+  toastText: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text,
+  },
+  toastLink: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.accent,
   },
   bottomPanel: {
     backgroundColor: colors.cardBg,
