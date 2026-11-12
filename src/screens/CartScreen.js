@@ -100,28 +100,17 @@ const CartScreen = ({ navigation }) => {
     }
   };
 
-  const removeItem = (itemId) => {
-    Alert.alert(
-      'Удалить товар',
-      'Вы уверены, что хотите удалить этот товар из корзины?',
-      [
-        { text: 'Отмена', style: 'cancel' },
-        { 
-          text: 'Удалить', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setUpdating(true);
-              await dispatch(removeFromCart(itemId)).unwrap();
-            } catch (message) {
-              Alert.alert('Не удалось удалить', String(message));
-            } finally {
-              setUpdating(false);
-            }
-          }
-        },
-      ]
-    );
+  // Без подтверждения: на кнопке прямо написано «Удалить», товар легко вернуть,
+  // а «−» на единице выключен — случайно не удалить.
+  const removeItem = async (itemId) => {
+    try {
+      setUpdating(true);
+      await dispatch(removeFromCart(itemId)).unwrap();
+    } catch (message) {
+      Alert.alert('Не удалось удалить', String(message));
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const handleRemoveItem = (itemId) => {
@@ -257,9 +246,9 @@ const CartScreen = ({ navigation }) => {
         <View style={styles.quantityControls}>
           <View style={styles.quantityStepper}>
             <TouchableOpacity
-              style={[styles.quantityButton, updating && styles.quantityButtonDisabled]}
+              style={[styles.quantityButton, (updating || item.quantity <= 1) && styles.quantityButtonDisabled]}
               onPress={() => updateQuantity(item.id, item.quantity - 1)}
-              disabled={updating}
+              disabled={updating || item.quantity <= 1}
             >
               <Text style={styles.quantityButtonText}>-</Text>
             </TouchableOpacity>
@@ -267,7 +256,7 @@ const CartScreen = ({ navigation }) => {
             <Text style={styles.quantityText}>{item.quantity}</Text>
 
             <TouchableOpacity
-              style={[styles.quantityButton, updating && styles.quantityButtonDisabled]}
+              style={[styles.quantityButton, (updating || item.quantity >= 10) && styles.quantityButtonDisabled]}
               onPress={() => updateQuantity(item.id, item.quantity + 1)}
               disabled={updating || item.quantity >= 10 /* сервер принимает 1–10 */}
             >
