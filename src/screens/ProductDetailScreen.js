@@ -485,15 +485,16 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.buttonText,
   },
   addonsContainer: {
-    gap: 12,
+    gap: 8,
   },
   addonItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     backgroundColor: colors.cardBg,
-    borderRadius: 20,
+    borderRadius: 14,
     borderWidth: 2,
     borderColor: colors.divider,
     shadowColor: colors.text,
@@ -508,9 +509,12 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   addonInfo: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   addonName: {
-    fontSize: 16,
+    flex: 1,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
   },
@@ -520,7 +524,7 @@ const makeStyles = (colors) => StyleSheet.create({
   addonPrice: {
     fontSize: 14,
     color: colors.textMuted,
-    marginTop: 4,
+    marginHorizontal: 10,
     fontWeight: '500',
   },
   addonPriceActive: {
