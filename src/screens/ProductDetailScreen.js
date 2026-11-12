@@ -510,7 +510,7 @@ const makeStyles = (colors) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingVertical: 5,
     backgroundColor: colors.cardBg,
     borderRadius: 14,
     borderWidth: 2,
