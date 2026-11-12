@@ -627,7 +627,7 @@ const makeStyles = (colors) => StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: 120,
+    top: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
