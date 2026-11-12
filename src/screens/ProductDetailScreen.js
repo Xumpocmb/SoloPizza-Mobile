@@ -112,6 +112,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
         if (!active) return;
         setProduct(data);
         setSelection(initialSelection(data));
+        navigation.setOptions({ title: data.name }); // заголовок — название товара, а не «Товар»
       })
       .catch(() => {
         if (active) setProduct(null);
@@ -122,7 +123,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
     return () => {
       active = false;
     };
-  }, [productId]);
+  }, [productId, navigation]);
 
   if (loading) {
     return (
