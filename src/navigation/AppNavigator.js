@@ -3,7 +3,7 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSelector } from 'react-redux';
-import { Text, View, StyleSheet, useColorScheme, Platform } from 'react-native';
+import { Image, Text, View, StyleSheet, useColorScheme, Platform } from 'react-native';
 import { light, dark } from '../theme/colors';
 
 // Тема навигации = палитра сайта (src/theme/colors.js): заголовки, таб-бар, фон.
@@ -126,7 +126,9 @@ export default function AppNavigator() {
           component={HomeStack}
           options={{
             tabBarLabel: 'Главная',
-            tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>🏠</Text>,
+            tabBarIcon: ({ size }) => (
+              <Image source={require('../../assets/logo-tab.png')} style={[styles.logoIcon, { width: size, height: size }]} />
+            ),
           }}
         />
         <Tab.Screen
@@ -159,6 +161,9 @@ export default function AppNavigator() {
 }
 
 const styles = StyleSheet.create({
+  logoIcon: {
+    borderRadius: 6,
+  },
   cartIconContainer: {
     position: 'relative',
   },
