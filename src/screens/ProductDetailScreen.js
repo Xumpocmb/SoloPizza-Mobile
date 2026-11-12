@@ -10,6 +10,7 @@ import {
 import { useDispatch } from 'react-redux';
 import Alert from '../utils/alertShim';
 import ProductImage from '../components/ui/ProductImage';
+import Icon from '../components/ui/Icon';
 import useAppTheme from '../theme/useAppTheme';
 import { num } from '../utils/money';
 import { addToCart } from '../store/slices/cartSlice';
@@ -60,6 +61,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [sauceOpen, setSauceOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -183,17 +185,40 @@ const ProductDetailScreen = ({ route, navigation }) => {
         {sauces.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Соус-основа</Text>
-            <View style={styles.optionsContainer}>
-              {sauces.map((sauce) => (
-                <Chip
-                  key={sauce.id}
-                  styles={styles}
-                  label={sauce.name}
-                  active={selection.sauce?.id === sauce.id}
-                  onPress={() => setSelection({ ...selection, sauce })}
-                />
-              ))}
-            </View>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setSauceOpen(!sauceOpen)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: sauceOpen }}
+              accessibilityLabel={`Соус-основа: ${selection.sauce?.name ?? 'не выбран'}`}
+            >
+              <Text style={styles.dropdownText} numberOfLines={1}>
+                {selection.sauce?.name ?? 'Выберите соус'}
+              </Text>
+              <Icon name={sauceOpen ? 'expand-less' : 'expand-more'} size={22} color={colors.textMuted} />
+            </TouchableOpacity>
+            {sauceOpen && (
+              <View style={styles.dropdownList}>
+                {sauces.map((sauce) => {
+                  const active = selection.sauce?.id === sauce.id;
+                  return (
+                    <TouchableOpacity
+                      key={sauce.id}
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setSelection({ ...selection, sauce });
+                        setSauceOpen(false);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                    >
+                      <Text style={[styles.dropdownText, active && styles.dropdownTextActive]}>{sauce.name}</Text>
+                      {active && <Icon name="check" size={20} color={colors.accent} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
           </View>
         )}
 
@@ -397,6 +422,39 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   optionTextActive: {
     color: colors.buttonText,
+  },
+  dropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.divider,
+  },
+  dropdownList: {
+    marginTop: 8,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.divider,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  dropdownText: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.text,
+  },
+  dropdownTextActive: {
+    color: colors.accent,
+    fontWeight: '700',
   },
   optionPrice: {
     fontSize: 13,
