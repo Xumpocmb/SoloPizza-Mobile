@@ -50,6 +50,45 @@ const Chip = ({ styles, active, label, price, onPress }) => (
   </TouchableOpacity>
 );
 
+// Выпадающий список: поле с выбранным значением, по нажатию — варианты под ним
+const Dropdown = ({ styles, colors, title, value, items }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <TouchableOpacity
+        style={styles.dropdown}
+        onPress={() => setOpen(!open)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={`${title}: ${value}`}
+      >
+        <Text style={styles.dropdownText} numberOfLines={1}>{value}</Text>
+        <Icon name={open ? 'expand-less' : 'expand-more'} size={22} color={colors.textMuted} />
+      </TouchableOpacity>
+      {open && (
+        <View style={styles.dropdownList}>
+          {items.map((item) => (
+            <TouchableOpacity
+              key={item.key}
+              style={styles.dropdownItem}
+              onPress={() => {
+                item.onPress();
+                setOpen(false);
+              }}
+              accessibilityRole="button"
+              accessibilityState={{ selected: item.active }}
+            >
+              <Text style={[styles.dropdownText, item.active && styles.dropdownTextActive]}>{item.label}</Text>
+              {num(item.price) > 0 && <Text style={styles.dropdownPrice}>+{num(item.price).toFixed(2)} BYN</Text>}
+              {item.active && <Icon name="check" size={20} color={colors.accent} />}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </>
+  );
+};
+
 const ProductDetailScreen = ({ route, navigation }) => {
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
@@ -61,7 +100,6 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
-  const [sauceOpen, setSauceOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -129,26 +167,24 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const renderBoardRow = (slot, otherSlot, title) => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.optionsContainer}>
-        <Chip
-          styles={styles}
-          label="Без борта"
-          active={!selection[slot]}
-          onPress={() => setSelection({ ...selection, [slot]: null })}
-        />
-        {variant.boards
-          .filter((board) => board.id !== selection[otherSlot]?.id)
-          .map((board) => (
-            <Chip
-              key={board.id}
-              styles={styles}
-              label={optionLabel(board.name)}
-              price={board.price}
-              active={selection[slot]?.id === board.id}
-              onPress={() => setSelection({ ...selection, [slot]: board })}
-            />
-          ))}
-      </View>
+      <Dropdown
+        styles={styles}
+        colors={colors}
+        title={title}
+        value={selection[slot] ? optionLabel(selection[slot].name) : 'Без борта'}
+        items={[
+          { key: 'none', label: 'Без борта', active: !selection[slot], onPress: () => setSelection({ ...selection, [slot]: null }) },
+          ...variant.boards
+            .filter((board) => board.id !== selection[otherSlot]?.id)
+            .map((board) => ({
+              key: board.id,
+              label: optionLabel(board.name),
+              price: board.price,
+              active: selection[slot]?.id === board.id,
+              onPress: () => setSelection({ ...selection, [slot]: board }),
+            })),
+        ]}
+      />
     </View>
   );
 
@@ -185,40 +221,18 @@ const ProductDetailScreen = ({ route, navigation }) => {
         {sauces.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Соус-основа</Text>
-            <TouchableOpacity
-              style={styles.dropdown}
-              onPress={() => setSauceOpen(!sauceOpen)}
-              accessibilityRole="button"
-              accessibilityState={{ expanded: sauceOpen }}
-              accessibilityLabel={`Соус-основа: ${selection.sauce?.name ?? 'не выбран'}`}
-            >
-              <Text style={styles.dropdownText} numberOfLines={1}>
-                {selection.sauce?.name ?? 'Выберите соус'}
-              </Text>
-              <Icon name={sauceOpen ? 'expand-less' : 'expand-more'} size={22} color={colors.textMuted} />
-            </TouchableOpacity>
-            {sauceOpen && (
-              <View style={styles.dropdownList}>
-                {sauces.map((sauce) => {
-                  const active = selection.sauce?.id === sauce.id;
-                  return (
-                    <TouchableOpacity
-                      key={sauce.id}
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        setSelection({ ...selection, sauce });
-                        setSauceOpen(false);
-                      }}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                    >
-                      <Text style={[styles.dropdownText, active && styles.dropdownTextActive]}>{sauce.name}</Text>
-                      {active && <Icon name="check" size={20} color={colors.accent} />}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
+            <Dropdown
+              styles={styles}
+              colors={colors}
+              title="Соус-основа"
+              value={selection.sauce?.name ?? 'Выберите соус'}
+              items={sauces.map((sauce) => ({
+                key: sauce.id,
+                label: sauce.name,
+                active: selection.sauce?.id === sauce.id,
+                onPress: () => setSelection({ ...selection, sauce }),
+              }))}
+            />
           </View>
         )}
 
@@ -451,6 +465,11 @@ const makeStyles = (colors) => StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: colors.text,
+  },
+  dropdownPrice: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginHorizontal: 8,
   },
   dropdownTextActive: {
     color: colors.accent,
