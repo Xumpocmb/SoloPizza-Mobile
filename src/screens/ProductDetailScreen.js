@@ -608,7 +608,8 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   bottomPanel: {
     backgroundColor: colors.cardBg,
-    padding: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: colors.divider,
     shadowColor: colors.text,
@@ -621,22 +622,22 @@ const makeStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   totalPriceLabel: {
-    fontSize: 18,
+    fontSize: 16,
     color: colors.text,
     fontWeight: '500',
   },
   totalPrice: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.accent,
   },
   addToCartButton: {
     backgroundColor: colors.accent,
-    paddingVertical: 18,
-    borderRadius: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
     alignItems: 'center',
     shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
@@ -646,7 +647,7 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   addToCartButtonText: {
     color: colors.buttonText,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
   },
 });
