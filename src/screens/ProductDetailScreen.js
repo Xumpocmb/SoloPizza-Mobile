@@ -290,8 +290,8 @@ const ProductDetailScreen = ({ route, navigation }) => {
           </View>
         )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Количество</Text>
+        <View style={[styles.section, styles.quantitySection]}>
+          <Text style={[styles.sectionTitle, styles.quantityTitle]}>Количество</Text>
           <View style={styles.quantityContainer}>
             <TouchableOpacity
               style={styles.quantityButton}
@@ -549,16 +549,23 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
+  quantitySection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  quantityTitle: {
+    marginBottom: 0,
+  },
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
+    gap: 10,
   },
   quantityButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
@@ -570,14 +577,14 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   quantityButtonText: {
     color: colors.buttonText,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   quantityText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: colors.text,
-    minWidth: 40,
+    minWidth: 28,
     textAlign: 'center',
   },
   nutritionContainer: {
