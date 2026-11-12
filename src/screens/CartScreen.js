@@ -305,20 +305,6 @@ const CartScreen = ({ navigation }) => {
     </View>
   );
 
-  const renderCartSummary = () => (
-    <View style={styles.summaryContainer}>
-      <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Товаров:</Text>
-        <Text style={styles.summaryValue}>{totalItems} шт.</Text>
-      </View>
-      <View style={styles.summaryDivider} />
-      <View style={styles.summaryRow}>
-        <Text style={styles.totalLabel}>Итого к оплате:</Text>
-        <Text style={styles.totalValue}>{totalAmount.toFixed(2)} BYN</Text>
-      </View>
-    </View>
-  );
-
   useEffect(() => {
     loadCart();
   }, []);
@@ -347,12 +333,19 @@ const CartScreen = ({ navigation }) => {
                 colors={[colors.accent]}
               />
             }
-            ListFooterComponent={renderCartSummary}
           />
 
           {/* Нижняя панель с кнопкой оформления */}
           <View style={styles.bottomPanel}>
-            {/* итог уже есть в сводке под списком — здесь не дублируем */}
+            {/* сводка только здесь, под списком её нет — не дублируем */}
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Товаров:</Text>
+              <Text style={styles.summaryValue}>{totalItems} шт.</Text>
+            </View>
+            <View style={[styles.summaryRow, styles.totalRow]}>
+              <Text style={styles.totalLabel}>Итого к оплате:</Text>
+              <Text style={styles.totalValue}>{totalAmount.toFixed(2)} BYN</Text>
+            </View>
             <TouchableOpacity
               style={styles.checkoutButton}
               onPress={handleCheckout}
@@ -514,40 +507,27 @@ const makeStyles = (colors) => StyleSheet.create({
   removeButtonDisabled: {
     opacity: 0.5,
   },
-  summaryContainer: {
-    backgroundColor: colors.cardBg,
-    margin: 20,
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-  },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 6,
+  },
+  totalRow: {
+    marginBottom: 14,
   },
   summaryLabel: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textMuted,
     fontWeight: '500',
   },
   summaryValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
   },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginVertical: 12,
-  },
   totalLabel: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
   },
