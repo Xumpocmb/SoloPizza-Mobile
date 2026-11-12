@@ -153,7 +153,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <ProductImage uri={product.image} style={styles.productImage} emojiSize={72} />
+        <ProductImage uri={product.image} style={styles.productImage} emojiSize={72} resizeMode="contain" />
 
         <View style={styles.productInfo}>
           <Text style={styles.productName}>{product.name}</Text>
@@ -324,7 +324,7 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   productImage: {
     width: '100%',
-    height: 220,
+    height: 300, // contain: фото целиком, без обрезки; выше — опции уезжают за экран
   },
   productInfo: {
     paddingHorizontal: 20,
