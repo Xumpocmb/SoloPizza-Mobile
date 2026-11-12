@@ -89,7 +89,7 @@ const LoginScreen = ({ navigation }) => {
         await authService.storeUserData(response.user);
       }
       
-      navigation.replace('MainTabs');
+      navigation.goBack();
     } catch (error) {
       console.error('Login error:', error);
       
