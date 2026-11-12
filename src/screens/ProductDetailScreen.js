@@ -112,6 +112,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
         if (!active) return;
         setProduct(data);
         setSelection(initialSelection(data));
+        navigation.setOptions({ title: data.name }); // заголовок — название товара, а не «Товар»
       })
       .catch(() => {
         if (active) setProduct(null);
@@ -122,7 +123,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
     return () => {
       active = false;
     };
-  }, [productId]);
+  }, [productId, navigation]);
 
   if (loading) {
     return (
@@ -155,7 +156,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
     try {
       await dispatch(addToCart(buildCartPayload(product, selection, quantity))).unwrap();
       // не модальный диалог: плашка сама пропадает, покупку не прерывает
-      setToast(`${product.name} — в корзине`);
+      setToast(`${product.name} добавлен в корзину`);
       clearTimeout(toastTimer.current);
       toastTimer.current = setTimeout(() => setToast(null), 2500);
     } catch (message) {
@@ -626,7 +627,7 @@ const makeStyles = (colors) => StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: 120,
+    top: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,

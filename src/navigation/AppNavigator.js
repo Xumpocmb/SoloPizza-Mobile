@@ -41,15 +41,14 @@ const Tab = createBottomTabNavigator();
 
 // Компонент иконки корзины с бейджем
 function CartIcon({ color, size }) {
-  const cartItems = useSelector(state => state.cart.items);
-  const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  const itemCount = useSelector((state) => state.cart.itemsCount); // сумма количеств, считает сервер
 
   return (
     <View style={styles.cartIconContainer}>
       <Text style={{ color, fontSize: size }}>🛒</Text>
       {itemCount > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{itemCount}</Text>
+        <View style={styles.badge} accessibilityLabel={`В корзине ${itemCount} шт.`}>
+          <Text style={styles.badgeText}>{itemCount > 99 ? '99+' : itemCount}</Text>
         </View>
       )}
     </View>
@@ -169,18 +168,19 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    right: -6,
-    top: -3,
+    right: -12,
+    top: -2, // выше — обрезается краем таб-бара
     backgroundColor: '#079b59',
-    borderRadius: 6,
-    width: 12,
-    height: 12,
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
     justifyContent: 'center',
     alignItems: 'center',
   },
   badgeText: {
     color: 'white',
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: 'bold',
   },
 });
