@@ -83,7 +83,7 @@ export default function OrderHistoryScreen({ navigation }) {
       ListEmptyComponent={
         <>
           <Text style={styles.title}>Заказов пока нет</Text>
-          <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('MainTabs', { screen: 'Catalog' })}>
+          <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Catalog')}>
             <Text style={styles.buttonText}>Перейти в меню</Text>
           </TouchableOpacity>
         </>

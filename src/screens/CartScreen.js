@@ -230,53 +230,59 @@ const CartScreen = ({ navigation }) => {
 
     return (
       <View style={styles.cartItem}>
-        <ProductImage
-          uri={item.image || item.product?.main_image}
-          style={styles.itemImage}
-          emojiSize={28}
-        />
-        
-        <View style={styles.itemInfo}>
-          <Text style={styles.itemName} numberOfLines={2}>
-            {item.name || item.product?.name || 'Товар'}
-          </Text>
-          
-          {/* Размер, соус, борты, добавки, напиток */}
-          {!!cartItemOptions(item) && (
-            <Text style={styles.itemOption}>{cartItemOptions(item)}</Text>
-          )}
-          
-          <View style={styles.itemFooter}>
-            <Text style={styles.itemPrice}>{num(item.price ?? item.total_price).toFixed(2)} BYN за шт.</Text>
-            <Text style={styles.itemTotal}>Итого: {itemTotal} BYN</Text>
+        <View style={styles.itemTop}>
+          <ProductImage
+            uri={item.image || item.product?.main_image}
+            style={styles.itemImage}
+            emojiSize={28}
+          />
+
+          <View style={styles.itemInfo}>
+            <Text style={styles.itemName} numberOfLines={2}>
+              {item.name || item.product?.name || 'Товар'}
+            </Text>
+
+            {/* Размер, соус, борты, добавки, напиток */}
+            {!!cartItemOptions(item) && (
+              <Text style={styles.itemOption}>{cartItemOptions(item)}</Text>
+            )}
+
+            <View style={styles.itemFooter}>
+              <Text style={styles.itemPrice}>{num(item.price ?? item.total_price).toFixed(2)} BYN за шт.</Text>
+              <Text style={styles.itemTotal}>Итого: {itemTotal} BYN</Text>
+            </View>
           </View>
         </View>
-        
+
         <View style={styles.quantityControls}>
-          <TouchableOpacity
-            style={[styles.quantityButton, updating && styles.quantityButtonDisabled]}
-            onPress={() => updateQuantity(item.id, item.quantity - 1)}
-            disabled={updating}
-          >
-            <Text style={styles.quantityButtonText}>-</Text>
-          </TouchableOpacity>
-          
-          <Text style={styles.quantityText}>{item.quantity}</Text>
-          
-          <TouchableOpacity
-            style={[styles.quantityButton, updating && styles.quantityButtonDisabled]}
-            onPress={() => updateQuantity(item.id, item.quantity + 1)}
-            disabled={updating || item.quantity >= 10 /* сервер принимает 1–10 */}
-          >
-            <Text style={styles.quantityButtonText}>+</Text>
-          </TouchableOpacity>
-          
+          <View style={styles.quantityStepper}>
+            <TouchableOpacity
+              style={[styles.quantityButton, updating && styles.quantityButtonDisabled]}
+              onPress={() => updateQuantity(item.id, item.quantity - 1)}
+              disabled={updating}
+            >
+              <Text style={styles.quantityButtonText}>-</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.quantityText}>{item.quantity}</Text>
+
+            <TouchableOpacity
+              style={[styles.quantityButton, updating && styles.quantityButtonDisabled]}
+              onPress={() => updateQuantity(item.id, item.quantity + 1)}
+              disabled={updating || item.quantity >= 10 /* сервер принимает 1–10 */}
+            >
+              <Text style={styles.quantityButtonText}>+</Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity
             style={[styles.removeButton, updating && styles.removeButtonDisabled]}
             onPress={() => removeItem(item.id)}
             disabled={updating}
+            accessibilityRole="button"
+            accessibilityLabel={`Удалить ${item.name || 'товар'} из корзины`}
           >
-            <Text style={styles.removeButtonText}>×</Text>
+            <Text style={styles.removeButtonText}>Удалить</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -296,20 +302,6 @@ const CartScreen = ({ navigation }) => {
       >
         <Text style={styles.continueButtonText}>Перейти к покупкам</Text>
       </TouchableOpacity>
-    </View>
-  );
-
-  const renderCartSummary = () => (
-    <View style={styles.summaryContainer}>
-      <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Товаров:</Text>
-        <Text style={styles.summaryValue}>{totalItems} шт.</Text>
-      </View>
-      <View style={styles.summaryDivider} />
-      <View style={styles.summaryRow}>
-        <Text style={styles.totalLabel}>Итого к оплате:</Text>
-        <Text style={styles.totalValue}>{totalAmount.toFixed(2)} BYN</Text>
-      </View>
     </View>
   );
 
@@ -341,12 +333,19 @@ const CartScreen = ({ navigation }) => {
                 colors={[colors.accent]}
               />
             }
-            ListFooterComponent={renderCartSummary}
           />
 
           {/* Нижняя панель с кнопкой оформления */}
           <View style={styles.bottomPanel}>
-            {/* итог уже есть в сводке под списком — здесь не дублируем */}
+            {/* сводка только здесь, под списком её нет — не дублируем */}
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Товаров:</Text>
+              <Text style={styles.summaryValue}>{totalItems} шт.</Text>
+            </View>
+            <View style={[styles.summaryRow, styles.totalRow]}>
+              <Text style={styles.totalLabel}>Итого к оплате:</Text>
+              <Text style={styles.totalValue}>{totalAmount.toFixed(2)} BYN</Text>
+            </View>
             <TouchableOpacity
               style={styles.checkoutButton}
               onPress={handleCheckout}
@@ -401,13 +400,15 @@ const makeStyles = (colors) => StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 16,
     borderRadius: 20,
-    padding: 20,
-    flexDirection: 'row',
+    padding: 16,
     shadowColor: colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 4,
+  },
+  itemTop: {
+    flexDirection: 'row',
   },
   itemImage: {
     width: 90,
@@ -447,14 +448,20 @@ const makeStyles = (colors) => StyleSheet.create({
     marginTop: 4,
   },
   quantityControls: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginLeft: 12,
+    marginTop: 12,
+  },
+  quantityStepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   quantityButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
@@ -473,18 +480,16 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: colors.text,
-    marginVertical: 10,
-    minWidth: 30,
+    minWidth: 28,
     textAlign: 'center',
   },
   removeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 20,
+    paddingHorizontal: 16,
+    height: 34,
+    borderRadius: 12,
     backgroundColor: colors.error,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
     shadowColor: colors.error,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -493,7 +498,7 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   removeButtonText: {
     color: colors.buttonText,
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: '700',
   },
   quantityButtonDisabled: {
@@ -502,40 +507,27 @@ const makeStyles = (colors) => StyleSheet.create({
   removeButtonDisabled: {
     opacity: 0.5,
   },
-  summaryContainer: {
-    backgroundColor: colors.cardBg,
-    margin: 20,
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-  },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 6,
+  },
+  totalRow: {
+    marginBottom: 14,
   },
   summaryLabel: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textMuted,
     fontWeight: '500',
   },
   summaryValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
   },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginVertical: 12,
-  },
   totalLabel: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
   },

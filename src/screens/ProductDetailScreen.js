@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 import { useDispatch } from 'react-redux';
 import Alert from '../utils/alertShim';
 import ProductImage from '../components/ui/ProductImage';
+import Icon from '../components/ui/Icon';
 import useAppTheme from '../theme/useAppTheme';
 import { num } from '../utils/money';
 import { addToCart } from '../store/slices/cartSlice';
@@ -49,6 +50,45 @@ const Chip = ({ styles, active, label, price, onPress }) => (
   </TouchableOpacity>
 );
 
+// Выпадающий список: поле с выбранным значением, по нажатию — варианты под ним
+const Dropdown = ({ styles, colors, title, value, items }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <TouchableOpacity
+        style={styles.dropdown}
+        onPress={() => setOpen(!open)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={`${title}: ${value}`}
+      >
+        <Text style={styles.dropdownText} numberOfLines={1}>{value}</Text>
+        <Icon name={open ? 'expand-less' : 'expand-more'} size={22} color={colors.textMuted} />
+      </TouchableOpacity>
+      {open && (
+        <View style={styles.dropdownList}>
+          {items.map((item) => (
+            <TouchableOpacity
+              key={item.key}
+              style={styles.dropdownItem}
+              onPress={() => {
+                item.onPress();
+                setOpen(false);
+              }}
+              accessibilityRole="button"
+              accessibilityState={{ selected: item.active }}
+            >
+              <Text style={[styles.dropdownText, item.active && styles.dropdownTextActive]}>{item.label}</Text>
+              {num(item.price) > 0 && <Text style={styles.dropdownPrice}>+{num(item.price).toFixed(2)} BYN</Text>}
+              {item.active && <Icon name="check" size={20} color={colors.accent} />}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </>
+  );
+};
+
 const ProductDetailScreen = ({ route, navigation }) => {
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
@@ -60,6 +100,9 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
 
   useEffect(() => {
     let active = true;
@@ -111,10 +154,10 @@ const ProductDetailScreen = ({ route, navigation }) => {
     setAdding(true);
     try {
       await dispatch(addToCart(buildCartPayload(product, selection, quantity))).unwrap();
-      Alert.alert('Добавлено в корзину', `${product.name} — в корзине`, [
-        { text: 'Продолжить покупки', style: 'cancel' },
-        { text: 'Перейти в корзину', onPress: () => navigation.navigate('Cart') },
-      ]);
+      // не модальный диалог: плашка сама пропадает, покупку не прерывает
+      setToast(`${product.name} — в корзине`);
+      clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => setToast(null), 2500);
     } catch (message) {
       // сервер объясняет, что не так: товар не в этом филиале, борт не того размера и т.п.
       Alert.alert('Не удалось добавить', String(message));
@@ -127,33 +170,31 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const renderBoardRow = (slot, otherSlot, title) => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.optionsContainer}>
-        <Chip
-          styles={styles}
-          label="Без борта"
-          active={!selection[slot]}
-          onPress={() => setSelection({ ...selection, [slot]: null })}
-        />
-        {variant.boards
-          .filter((board) => board.id !== selection[otherSlot]?.id)
-          .map((board) => (
-            <Chip
-              key={board.id}
-              styles={styles}
-              label={optionLabel(board.name)}
-              price={board.price}
-              active={selection[slot]?.id === board.id}
-              onPress={() => setSelection({ ...selection, [slot]: board })}
-            />
-          ))}
-      </View>
+      <Dropdown
+        styles={styles}
+        colors={colors}
+        title={title}
+        value={selection[slot] ? optionLabel(selection[slot].name) : 'Без борта'}
+        items={[
+          { key: 'none', label: 'Без борта', active: !selection[slot], onPress: () => setSelection({ ...selection, [slot]: null }) },
+          ...variant.boards
+            .filter((board) => board.id !== selection[otherSlot]?.id)
+            .map((board) => ({
+              key: board.id,
+              label: optionLabel(board.name),
+              price: board.price,
+              active: selection[slot]?.id === board.id,
+              onPress: () => setSelection({ ...selection, [slot]: board }),
+            })),
+        ]}
+      />
     </View>
   );
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <ProductImage uri={product.image} style={styles.productImage} emojiSize={72} />
+        <ProductImage uri={product.image} style={styles.productImage} emojiSize={72} resizeMode="contain" />
 
         <View style={styles.productInfo}>
           <Text style={styles.productName}>{product.name}</Text>
@@ -171,7 +212,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
                 <Chip
                   key={v.id}
                   styles={styles}
-                  label={`${variantLabel(v)} — ${num(v.price).toFixed(2)} BYN`}
+                  label={variantLabel(v)}
                   active={variant.id === v.id}
                   onPress={() => setSelection(withVariant(selection, v))}
                 />
@@ -183,17 +224,18 @@ const ProductDetailScreen = ({ route, navigation }) => {
         {sauces.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Соус-основа</Text>
-            <View style={styles.optionsContainer}>
-              {sauces.map((sauce) => (
-                <Chip
-                  key={sauce.id}
-                  styles={styles}
-                  label={sauce.name}
-                  active={selection.sauce?.id === sauce.id}
-                  onPress={() => setSelection({ ...selection, sauce })}
-                />
-              ))}
-            </View>
+            <Dropdown
+              styles={styles}
+              colors={colors}
+              title="Соус-основа"
+              value={selection.sauce?.name ?? 'Выберите соус'}
+              items={sauces.map((sauce) => ({
+                key: sauce.id,
+                label: sauce.name,
+                active: selection.sauce?.id === sauce.id,
+                onPress: () => setSelection({ ...selection, sauce }),
+              }))}
+            />
           </View>
         )}
 
@@ -251,8 +293,8 @@ const ProductDetailScreen = ({ route, navigation }) => {
           </View>
         )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Количество</Text>
+        <View style={[styles.section, styles.quantitySection]}>
+          <Text style={[styles.sectionTitle, styles.quantityTitle]}>Количество</Text>
           <View style={styles.quantityContainer}>
             <TouchableOpacity
               style={styles.quantityButton}
@@ -272,6 +314,16 @@ const ProductDetailScreen = ({ route, navigation }) => {
           </View>
         </View>
       </ScrollView>
+
+      {toast && (
+        <View style={styles.toast} accessibilityLiveRegion="polite">
+          <Icon name="check-circle" size={20} color={colors.accent} />
+          <Text style={styles.toastText} numberOfLines={1}>{toast}</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Cart')} accessibilityRole="button">
+            <Text style={styles.toastLink}>В корзину</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.bottomPanel}>
         <View style={styles.priceContainer}>
@@ -324,7 +376,7 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   productImage: {
     width: '100%',
-    height: 220,
+    height: 300, // contain: фото целиком, без обрезки; выше — опции уезжают за экран
   },
   productInfo: {
     paddingHorizontal: 20,
@@ -398,6 +450,44 @@ const makeStyles = (colors) => StyleSheet.create({
   optionTextActive: {
     color: colors.buttonText,
   },
+  dropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.divider,
+  },
+  dropdownList: {
+    marginTop: 8,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.divider,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  dropdownText: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.text,
+  },
+  dropdownPrice: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginHorizontal: 8,
+  },
+  dropdownTextActive: {
+    color: colors.accent,
+    fontWeight: '700',
+  },
   optionPrice: {
     fontSize: 13,
     color: colors.textMuted,
@@ -408,15 +498,16 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.buttonText,
   },
   addonsContainer: {
-    gap: 12,
+    gap: 8,
   },
   addonItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     backgroundColor: colors.cardBg,
-    borderRadius: 20,
+    borderRadius: 14,
     borderWidth: 2,
     borderColor: colors.divider,
     shadowColor: colors.text,
@@ -431,9 +522,12 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   addonInfo: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   addonName: {
-    fontSize: 16,
+    flex: 1,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
   },
@@ -443,7 +537,7 @@ const makeStyles = (colors) => StyleSheet.create({
   addonPrice: {
     fontSize: 14,
     color: colors.textMuted,
-    marginTop: 4,
+    marginHorizontal: 10,
     fontWeight: '500',
   },
   addonPriceActive: {
@@ -468,16 +562,23 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
+  quantitySection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  quantityTitle: {
+    marginBottom: 0,
+  },
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
+    gap: 10,
   },
   quantityButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
@@ -489,14 +590,14 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   quantityButtonText: {
     color: colors.buttonText,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   quantityText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: colors.text,
-    minWidth: 40,
+    minWidth: 28,
     textAlign: 'center',
   },
   nutritionContainer: {
@@ -518,9 +619,37 @@ const makeStyles = (colors) => StyleSheet.create({
     fontWeight: '600',
     color: colors.textMuted,
   },
+  toast: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 120,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: colors.headerBg,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    elevation: 10,
+    zIndex: 10,
+  },
+  toastText: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text,
+  },
+  toastLink: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.accent,
+  },
   bottomPanel: {
     backgroundColor: colors.cardBg,
-    padding: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: colors.divider,
     shadowColor: colors.text,
@@ -533,22 +662,22 @@ const makeStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   totalPriceLabel: {
-    fontSize: 18,
+    fontSize: 16,
     color: colors.text,
     fontWeight: '500',
   },
   totalPrice: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.accent,
   },
   addToCartButton: {
     backgroundColor: colors.accent,
-    paddingVertical: 18,
-    borderRadius: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
     alignItems: 'center',
     shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
@@ -558,7 +687,7 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   addToCartButtonText: {
     color: colors.buttonText,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
   },
 });

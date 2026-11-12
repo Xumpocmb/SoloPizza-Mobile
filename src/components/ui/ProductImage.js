@@ -30,7 +30,7 @@ export const CATEGORY_GLYPHS = {
 export const webLazyProps = (os) =>
   os === 'web' ? { loading: 'lazy', decoding: 'async' } : {};
 
-export default function ProductImage({ uri, glyph, style, emojiSize = 40 }) {
+export default function ProductImage({ uri, glyph, style, emojiSize = 40, resizeMode = 'cover' }) {
   const { colors } = useAppTheme();
 
   if (uri) {
@@ -43,7 +43,7 @@ export default function ProductImage({ uri, glyph, style, emojiSize = 40 }) {
       <Image
         source={{ uri }}
         style={style}
-        resizeMode="cover"
+        resizeMode={resizeMode}
         {...webLazyProps(Platform.OS)}
       />
     );
