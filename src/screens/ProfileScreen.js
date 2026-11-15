@@ -14,8 +14,9 @@ import Alert from '../utils/alertShim';
 import useAppTheme from '../theme/useAppTheme';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout, updateProfile } from '../store/slices/authSlice';
-import { userService, authService } from '../services';
+import { authService } from '../services';
 import { loadCart } from '../store/slices/cartSlice';
+import orderService, { orderStats } from '../services/orderService';
 
 const ProfileScreen = ({ navigation }) => {
   const { colors } = useAppTheme();
@@ -34,20 +35,15 @@ const ProfileScreen = ({ navigation }) => {
   });
   const [errors, setErrors] = useState({});
 
+  // Статистики на сервере нет — считаем по своим заказам; не загрузилось — блока нет
   const loadStats = async () => {
+    if (!user) return;
     try {
       setLoading(true);
-      const statsData = await userService.getStats();
-      setStats(statsData);
+      const orders = await orderService.getOrders();
+      setStats(orderStats(Array.isArray(orders) ? orders : []));
     } catch (error) {
-      console.error('Error loading stats:', error);
-      // Set fallback stats
-      setStats({
-        total_orders: 0,
-        total_spent: 0,
-        favorite_category: 'Пицца',
-        join_date: new Date().toISOString(),
-      });
+      setStats(null);
     } finally {
       setLoading(false);
     }
@@ -168,7 +164,7 @@ const ProfileScreen = ({ navigation }) => {
 
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [user?.id]);
 
   if (!user) {
     return (
@@ -347,28 +343,14 @@ const ProfileScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>Статистика</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.total_orders || 0}</Text>
+              <Text style={styles.statValue}>{stats.count}</Text>
               <Text style={styles.statLabel}>Заказов</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.total_spent || 0} ₽</Text>
+              <Text style={styles.statValue}>{stats.spent.toFixed(2)} BYN</Text>
               <Text style={styles.statLabel}>Потрачено</Text>
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.favorite_category || 'Пицца'}</Text>
-              <Text style={styles.statLabel}>Любимая категория</Text>
-            </View>
           </View>
-          {stats.join_date && (
-            <View style={styles.joinDateContainer}>
-              <Text style={styles.joinDateText}>
-                С нами с {new Date(stats.join_date).toLocaleDateString('ru-RU', {
-                  year: 'numeric',
-                  month: 'long'
-                })}
-              </Text>
-            </View>
-          )}
         </View>
       )}
 

@@ -21,6 +21,15 @@ export const PAYMENT_LABELS = { cash: 'Наличные', card: 'Карта', no
 /** Статусы, после которых заказ уже не меняется — опрашивать сервер незачем. */
 export const FINAL_STATUSES = ['completed', 'canceled'];
 
+/** Статистика профиля из списка заказов: отменённые (в т.ч. тестовые «ТЕСТ») не считаются. */
+export const orderStats = (orders = []) => {
+  const real = orders.filter((order) => order.status !== 'canceled');
+  return {
+    count: real.length,
+    spent: real.reduce((sum, order) => sum + (Number(order.total_price) || 0), 0),
+  };
+};
+
 class OrderService {
   getCheckoutOptions() {
     return apiService.get(API_ENDPOINTS.CHECKOUT.OPTIONS);
