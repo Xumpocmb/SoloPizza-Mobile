@@ -215,12 +215,6 @@ const ProfileScreen = ({ navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.registerButton}
-            onPress={() => navigation.navigate('Register')}
-          >
-            <Text style={styles.registerButtonText}>Зарегистрироваться</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.registerButton}
             onPress={() => navigation.navigate('Contacts')}
           >
             <Text style={styles.registerButtonText}>Контакты</Text>

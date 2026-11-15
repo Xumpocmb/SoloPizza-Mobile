@@ -50,13 +50,8 @@ export const USER_API_ENABLED = false;
 
 // API Endpoints
 export const API_ENDPOINTS = {
-  // Authentication
-  // ⚠️ НЕ ЗАДЕПЛОЕНО: в app_api пока нет эндпоинтов авторизации (на сайте — allauth,
-  // сессии). Пути ниже — заглушки по plan.txt; сверим с фактом, когда друг допишет.
+  // Authentication: в приложении только вход через Google/Apple (регистрация по почте — на сайте)
   AUTH: {
-    LOGIN: '/auth/login/',
-    REGISTER: '/auth/register/',
-    TOKEN_OBTAIN: '/auth/token/',
     // app_api (Xumpocmb/SoloPizza#2): ротация — в ответе новый refresh, старый уходит в чёрный список
     TOKEN_REFRESH: '/auth/refresh/',
     GOOGLE: '/auth/google/',
@@ -124,8 +119,6 @@ export const API_ENDPOINTS = {
     PROFILE: '/auth/profile/',
     ADDRESSES: '/user/addresses/',
     STATS: '/user/stats/',
-    CHANGE_PASSWORD: '/auth/password/change/',
-    RESET_PASSWORD: '/auth/password/reset/',
   },
 };
 

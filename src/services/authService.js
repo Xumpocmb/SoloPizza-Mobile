@@ -8,66 +8,6 @@ const CART_TOKEN_KEY = 'cart_token'; // то же, что в cartService
 
 class AuthService {
   /**
-   * Login user.
-   *
-   * ИСПРАВЛЕНО ПРИ АУДИТЕ: была сигнатура login(email, password),
-   * но LoginScreen вызывает её ОДНИМ ОБЪЕКТОМ:
-   *   authService.login({ email, password, remember_me })
-   * → в password попадал undefined → «Неверный email или пароль» всегда.
-   *
-   * Теперь поддерживаются оба варианта вызова.
-   *
-   * @param {Object|string} emailOrPayload — { email, password, remember_me } либо email строкой
-   * @param {string} [password]
-   */
-  async login(emailOrPayload, password) {
-    const payload =
-      typeof emailOrPayload === 'string'
-        ? { email: emailOrPayload, password }
-        : { ...emailOrPayload };
-
-    try {
-      const response = await apiService.post(API_ENDPOINTS.AUTH.LOGIN, payload);
-
-      if (response.access && response.refresh) {
-        await apiService.setAuthToken(response.access);
-        await apiService.setRefreshToken(response.refresh);
-        
-        // Store user data if provided
-        if (response.user) {
-          await AsyncStorage.setItem('user_data', JSON.stringify(response.user));
-        }
-      }
-
-      return response;
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
-    }
-  }
-
-  // Register new user
-  async register(userData) {
-    try {
-      const response = await apiService.post(API_ENDPOINTS.AUTH.REGISTER, userData);
-      
-      if (response.access && response.refresh) {
-        await apiService.setAuthToken(response.access);
-        await apiService.setRefreshToken(response.refresh);
-        
-        if (response.user) {
-          await AsyncStorage.setItem('user_data', JSON.stringify(response.user));
-        }
-      }
-
-      return response;
-    } catch (error) {
-      console.error('Registration failed:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Вход через Google: выбор аккаунта на телефоне → id_token → наш сервер.
    * Сервер проверяет токен, находит/создаёт пользователя, забирает гостевую корзину
    * (X-Cart-Token) и отдаёт пару JWT. null — пользователь закрыл выбор аккаунта.
@@ -252,14 +192,6 @@ class AuthService {
     return me;
   }
 
-  /**
-   * Запросить письмо для восстановления пароля.
-   * LoginScreen → handleForgotPassword().
-   * @param {{email: string}} data
-   */
-  async resetPassword(data) {
-    return apiService.post(API_ENDPOINTS.USER.RESET_PASSWORD, data);
-  }
 }
 
 export default new AuthService();
