@@ -21,6 +21,7 @@ import BranchPicker from '../components/BranchPicker';
 import WeeklySpecialBanner from '../components/WeeklySpecialBanner';
 import useAppTheme from '../theme/useAppTheme';
 import { num } from '../utils/money';
+import { HOME_SLIDER_ENABLED } from '../config/api';
 
 const { width } = Dimensions.get('window');
 
@@ -65,7 +66,7 @@ const HomeScreen = ({ navigation }) => {
       const [categoriesData, productsData, promosData, weeklyData, vacanciesData, announcementsData] = await Promise.all([
         catalogService.getCategories({ force }),
         productService.getPopularProducts({ limit: 6, force }),
-        promoService.getActivePromos(),
+        HOME_SLIDER_ENABLED ? promoService.getActivePromos() : [],
         // v1.1: блюдо недели — один объект или null (блока просто нет)
         catalogService.getWeeklySpecial({ force }),
         // v1.1: вакансии — блок главной страницы, как на сайте друга
@@ -96,6 +97,7 @@ const HomeScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
+    if (!HOME_SLIDER_ENABLED) return undefined;
     // Автоматическая смена баннеров
     const interval = setInterval(() => {
       setBannerIndex((prevIndex) => (prevIndex + 1) % banners.length);
@@ -267,7 +269,8 @@ const HomeScreen = ({ navigation }) => {
         />
       ) : null}
 
-      {/* Banner Carousel */}
+      {/* Banner Carousel — выключен флагом HOME_SLIDER_ENABLED (config/api.js) */}
+      {HOME_SLIDER_ENABLED && (
       <View style={styles.bannerContainer}>
         <View style={[styles.banner, { backgroundColor: banners[bannerIndex].backgroundColor }]}>
           <Text style={styles.bannerTitle}>{banners[bannerIndex].title}</Text>
@@ -285,6 +288,7 @@ const HomeScreen = ({ navigation }) => {
           ))}
         </View>
       </View>
+      )}
 
 
       {/* Вакансии (v1.1): блок главной, вход в список — «Все вакансии» */}
