@@ -14,3 +14,17 @@ jest.mock('expo-secure-store', () => {
     }),
   };
 });
+
+// Google Sign-In — нативный модуль. Официальная заглушка пакета закрыта его полем exports,
+// поэтому своя: только то, что использует authService/LoginScreen.
+jest.mock('@react-native-google-signin/google-signin', () => ({
+  GoogleSignin: {
+    configure: jest.fn(),
+    hasPlayServices: jest.fn(async () => true),
+    signIn: jest.fn(async () => ({ type: 'cancelled', data: null })),
+    signOut: jest.fn(async () => null),
+  },
+  isSuccessResponse: (response) => response?.type === 'success',
+  isErrorWithCode: (error) => Boolean(error && typeof error === 'object' && 'code' in error),
+  statusCodes: { IN_PROGRESS: 'IN_PROGRESS', PLAY_SERVICES_NOT_AVAILABLE: 'PLAY_SERVICES_NOT_AVAILABLE' },
+}));

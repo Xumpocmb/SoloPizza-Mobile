@@ -1,6 +1,10 @@
-import apiService from './apiService';
-import { API_ENDPOINTS } from '../config/api';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GoogleSignin, isSuccessResponse } from '@react-native-google-signin/google-signin';
+import apiService from './apiService';
+import { API_ENDPOINTS, GOOGLE_WEB_CLIENT_ID } from '../config/api';
+
+const CART_TOKEN_KEY = 'cart_token'; // то же, что в cartService
 
 class AuthService {
   /**
@@ -63,9 +67,42 @@ class AuthService {
     }
   }
 
+  /**
+   * Вход через Google: выбор аккаунта на телефоне → id_token → наш сервер.
+   * Сервер проверяет токен, находит/создаёт пользователя, забирает гостевую корзину
+   * (X-Cart-Token) и отдаёт пару JWT. null — пользователь закрыл выбор аккаунта.
+   * Только Android/iOS: на вебе у библиотеки нет реализации.
+   */
+  async loginWithGoogle() {
+    GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    const result = await GoogleSignin.signIn();
+    if (!isSuccessResponse(result)) return null;
+
+    const cartToken = await AsyncStorage.getItem(CART_TOKEN_KEY);
+    const response = await apiService.makeRequest(API_ENDPOINTS.AUTH.GOOGLE, {
+      method: 'POST',
+      body: JSON.stringify({ id_token: result.data.idToken }),
+      headers: cartToken ? { 'X-Cart-Token': cartToken } : {},
+    });
+    await this.storeTokens(response.access, response.refresh);
+    await this.storeUserData(response.user);
+    await AsyncStorage.removeItem(CART_TOKEN_KEY); // гостевая корзина теперь корзина пользователя
+    return response.user;
+  }
+
   // Logout user
   async logout() {
     try {
+      const refresh = await apiService.getRefreshToken();
+      if (refresh) {
+        // refresh в чёрный список на сервере; не вышло (нет сети) — всё равно выходим локально
+        await apiService.post(API_ENDPOINTS.AUTH.LOGOUT, { refresh }).catch(() => {});
+      }
+      if (Platform.OS !== 'web') {
+        // иначе следующий вход молча возьмёт тот же Google-аккаунт без выбора
+        await GoogleSignin.signOut().catch(() => {});
+      }
       await apiService.clearTokens();
       await AsyncStorage.removeItem('user_data');
     } catch (error) {
