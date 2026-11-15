@@ -212,6 +212,29 @@ const HomeScreen = ({ navigation }) => {
         </View>
       ))}
 
+      {/* Меню (категории) — первым блоком, над «Новинками» */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Меню</Text>
+          <TouchableOpacity onPress={navigateToAllProducts}>
+            <Text style={styles.seeAllText}>Все товары</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {(apiCategories?.length > 0 ? apiCategories : categories)?.length > 0 ? (
+          <FlatList
+            data={apiCategories?.length > 0 ? apiCategories : categories}
+            renderItem={renderCategory}
+            keyExtractor={(item) => item.id.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesList}
+          />
+        ) : (
+          <Text style={styles.emptyText}>Категории не найдены</Text>
+        )}
+      </View>
+
       {/* Featured Products Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -263,29 +286,6 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </View>
 
-
-      {/* Categories Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Категории</Text>
-          <TouchableOpacity onPress={navigateToAllProducts}>
-            <Text style={styles.seeAllText}>Все товары</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {(apiCategories?.length > 0 ? apiCategories : categories)?.length > 0 ? (
-          <FlatList
-            data={apiCategories?.length > 0 ? apiCategories : categories}
-            renderItem={renderCategory}
-            keyExtractor={(item) => item.id.toString()}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesList}
-          />
-        ) : (
-          <Text style={styles.emptyText}>Категории не найдены</Text>
-        )}
-      </View>
 
       {/* Вакансии (v1.1): блок главной, вход в список — «Все вакансии» */}
       {vacancies.length > 0 && (
