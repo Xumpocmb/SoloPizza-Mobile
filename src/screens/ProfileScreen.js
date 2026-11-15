@@ -155,32 +155,6 @@ const ProfileScreen = ({ navigation }) => {
       onPress: () => navigation.navigate('OrderHistory'),
     },
     {
-      title: 'Адреса доставки',
-      icon: '📍',
-      onPress: () => {
-        Alert.alert('В разработке', 'Функция будет доступна в следующих версиях');
-      },
-    },
-    {
-      title: 'Способы оплаты',
-      icon: '💳',
-      onPress: () => {
-        Alert.alert('В разработке', 'Функция будет доступна в следующих версиях');
-      },
-    },
-    {
-      title: 'Уведомления',
-      icon: '🔔',
-      onPress: () => {
-        Alert.alert('В разработке', 'Функция будет доступна в следующих версиях');
-      },
-    },
-    {
-      title: 'Контакты',
-      icon: '📞',
-      onPress: () => navigation.navigate('Contacts'),
-    },
-    {
       title: 'О приложении',
       icon: 'ℹ️',
       onPress: () => {
