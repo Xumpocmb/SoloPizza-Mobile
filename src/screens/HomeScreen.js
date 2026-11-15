@@ -18,7 +18,7 @@ import { catalogService, productService, promoService, vacancyService } from '..
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DemoBanner from '../components/ui/DemoBanner';
 import BranchPicker from '../components/BranchPicker';
-import WeeklySpecialBanner from '../components/WeeklySpecialBanner';
+import PromoCarousel from '../components/PromoCarousel';
 import useAppTheme from '../theme/useAppTheme';
 import { num } from '../utils/money';
 import { HOME_SLIDER_ENABLED } from '../config/api';
@@ -260,14 +260,12 @@ const HomeScreen = ({ navigation }) => {
         )}
       </View>
 
-      {/* Пицца недели (v1.1): блок из макетов design/weekly-special-*.png */}
-      {weekly ? (
-        <WeeklySpecialBanner
-          product={weekly}
-          onAdd={() => handleAddToCart(weekly)}
-          onPress={() => navigation.navigate('ProductDetail', { productId: weekly.id })}
-        />
-      ) : null}
+      {/* Акции, как на сайте /discounts/: первая карточка — пицца недели */}
+      <PromoCarousel
+        weekly={weekly}
+        onOpenProduct={(product) => navigation.navigate('ProductDetail', { productId: product.id })}
+        onOpenCatalog={navigateToAllProducts}
+      />
 
       {/* Banner Carousel — выключен флагом HOME_SLIDER_ENABLED (config/api.js) */}
       {HOME_SLIDER_ENABLED && (
