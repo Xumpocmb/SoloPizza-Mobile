@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import apiService from '../../services/apiService';
 
 // API базовый URL (нужно будет настроить под ваш сервер)
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -116,7 +117,8 @@ export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async () => {
     try {
-      await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user_data']);
+      await apiService.clearTokens();
+      await AsyncStorage.removeItem('user_data');
     } catch (error) {
       // Хранилище могло быть недоступно — состояние всё равно сбрасываем
     }
@@ -127,8 +129,8 @@ export const logoutUser = createAsyncThunk(
 export const loadStoredTokens = createAsyncThunk(
   'auth/loadStoredTokens',
   async () => {
-    const accessToken = await AsyncStorage.getItem('access_token');
-    const refreshToken = await AsyncStorage.getItem('refresh_token');
+    const accessToken = await apiService.getAuthToken();
+    const refreshToken = await apiService.getRefreshToken();
     const rawUser = await AsyncStorage.getItem('user_data');
 
     let user = null;

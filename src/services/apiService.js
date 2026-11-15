@@ -1,5 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { API_BASE_URL, API_ENDPOINTS, DEFAULT_HEADERS, REQUEST_TIMEOUT } from '../config/api';
+
+// Токены входа — в Keychain/Keystore. На вебе SecureStore нет, а веб у нас только превью разработки.
+const tokenStore =
+  Platform.OS === 'web'
+    ? {
+        get: (key) => AsyncStorage.getItem(key),
+        set: (key, value) => AsyncStorage.setItem(key, value),
+        remove: (key) => AsyncStorage.removeItem(key),
+      }
+    : {
+        get: (key) => SecureStore.getItemAsync(key),
+        set: (key, value) => SecureStore.setItemAsync(key, value),
+        remove: (key) => SecureStore.deleteItemAsync(key),
+      };
 
 class ApiService {
   constructor() {
@@ -10,7 +26,7 @@ class ApiService {
   // Get stored auth token
   async getAuthToken() {
     try {
-      const token = await AsyncStorage.getItem('access_token');
+      const token = await tokenStore.get('access_token');
       return token;
     } catch (error) {
       console.error('Error getting auth token:', error);
@@ -21,7 +37,7 @@ class ApiService {
   // Set auth token
   async setAuthToken(token) {
     try {
-      await AsyncStorage.setItem('access_token', token);
+      await tokenStore.set('access_token', token);
     } catch (error) {
       console.error('Error setting auth token:', error);
     }
@@ -30,7 +46,7 @@ class ApiService {
   // Remove auth token
   async removeAuthToken() {
     try {
-      await AsyncStorage.removeItem('access_token');
+      await tokenStore.remove('access_token');
     } catch (error) {
       console.error('Error removing auth token:', error);
     }
@@ -39,7 +55,7 @@ class ApiService {
   // Get refresh token
   async getRefreshToken() {
     try {
-      const token = await AsyncStorage.getItem('refresh_token');
+      const token = await tokenStore.get('refresh_token');
       return token;
     } catch (error) {
       console.error('Error getting refresh token:', error);
@@ -50,9 +66,18 @@ class ApiService {
   // Set refresh token
   async setRefreshToken(token) {
     try {
-      await AsyncStorage.setItem('refresh_token', token);
+      await tokenStore.set('refresh_token', token);
     } catch (error) {
       console.error('Error setting refresh token:', error);
+    }
+  }
+
+  async clearTokens() {
+    try {
+      await tokenStore.remove('access_token');
+      await tokenStore.remove('refresh_token');
+    } catch (error) {
+      console.error('Error clearing tokens:', error);
     }
   }
 
@@ -93,8 +118,7 @@ class ApiService {
     } catch (error) {
       console.error('Token refresh failed:', error);
       // Clear tokens on refresh failure
-      await this.removeAuthToken();
-      await AsyncStorage.removeItem('refresh_token');
+      await this.clearTokens();
       throw error;
     }
   }

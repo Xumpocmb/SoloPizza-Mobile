@@ -66,8 +66,7 @@ class AuthService {
   // Logout user
   async logout() {
     try {
-      await apiService.removeAuthToken();
-      await AsyncStorage.removeItem('refresh_token');
+      await apiService.clearTokens();
       await AsyncStorage.removeItem('user_data');
     } catch (error) {
       console.error('Logout error:', error);

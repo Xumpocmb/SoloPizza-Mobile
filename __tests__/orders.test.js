@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import orderService, { newClientOrderId, FINAL_STATUSES } from '../src/services/orderService';
 import { apiErrorMessage, apiFieldErrors } from '../src/utils/apiError';
+import apiService from '../src/services/apiService';
 
 const UUID4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -28,7 +29,7 @@ describe('orderService ходит в настоящие эндпоинты с т
   beforeEach(async () => {
     calls = [];
     await AsyncStorage.clear();
-    await AsyncStorage.setItem('access_token', 'jwt-access');
+    await apiService.setAuthToken('jwt-access');
     global.fetch = jest.fn(async (url, options) => {
       calls.push({
         method: options.method,
