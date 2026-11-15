@@ -15,11 +15,13 @@ import ProductImage, { CATEGORY_GLYPHS } from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchFeaturedProducts, fetchCategories } from '../store/slices/productSlice';
 import { catalogService, productService, promoService, vacancyService } from '../services';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DemoBanner from '../components/ui/DemoBanner';
 import BranchPicker from '../components/BranchPicker';
-import WeeklySpecialBanner from '../components/WeeklySpecialBanner';
+import PromoCarousel from '../components/PromoCarousel';
 import useAppTheme from '../theme/useAppTheme';
 import { num } from '../utils/money';
+import { HOME_SLIDER_ENABLED } from '../config/api';
 
 const { width } = Dimensions.get('window');
 
@@ -64,7 +66,7 @@ const HomeScreen = ({ navigation }) => {
       const [categoriesData, productsData, promosData, weeklyData, vacanciesData, announcementsData] = await Promise.all([
         catalogService.getCategories({ force }),
         productService.getPopularProducts({ limit: 6, force }),
-        promoService.getActivePromos(),
+        HOME_SLIDER_ENABLED ? promoService.getActivePromos() : [],
         // v1.1: блюдо недели — один объект или null (блока просто нет)
         catalogService.getWeeklySpecial({ force }),
         // v1.1: вакансии — блок главной страницы, как на сайте друга
@@ -95,6 +97,7 @@ const HomeScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
+    if (!HOME_SLIDER_ENABLED) return undefined;
     // Автоматическая смена баннеров
     const interval = setInterval(() => {
       setBannerIndex((prevIndex) => (prevIndex + 1) % banners.length);
@@ -195,6 +198,8 @@ const HomeScreen = ({ navigation }) => {
   }
 
   return (
+    // edges top: контент не уходит под строку состояния (Android рисует приложение во весь экран)
+    <SafeAreaView style={styles.container} edges={['top']}>
     <ScrollView 
       style={styles.container}
       refreshControl={
@@ -208,6 +213,29 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.announcementText}>{item.text}</Text>
         </View>
       ))}
+
+      {/* Меню (категории) — первым блоком, над «Новинками» */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Меню</Text>
+          <TouchableOpacity onPress={navigateToAllProducts}>
+            <Text style={styles.seeAllText}>Все товары</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {(apiCategories?.length > 0 ? apiCategories : categories)?.length > 0 ? (
+          <FlatList
+            data={apiCategories?.length > 0 ? apiCategories : categories}
+            renderItem={renderCategory}
+            keyExtractor={(item) => item.id.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesList}
+          />
+        ) : (
+          <Text style={styles.emptyText}>Категории не найдены</Text>
+        )}
+      </View>
 
       {/* Featured Products Section */}
       <View style={styles.section}>
@@ -232,16 +260,15 @@ const HomeScreen = ({ navigation }) => {
         )}
       </View>
 
-      {/* Пицца недели (v1.1): блок из макетов design/weekly-special-*.png */}
-      {weekly ? (
-        <WeeklySpecialBanner
-          product={weekly}
-          onAdd={() => handleAddToCart(weekly)}
-          onPress={() => navigation.navigate('ProductDetail', { productId: weekly.id })}
-        />
-      ) : null}
+      {/* Акции, как на сайте /discounts/: первая карточка — пицца недели */}
+      <PromoCarousel
+        weekly={weekly}
+        onOpenProduct={(product) => navigation.navigate('ProductDetail', { productId: product.id })}
+        onOpenCatalog={navigateToAllProducts}
+      />
 
-      {/* Banner Carousel */}
+      {/* Banner Carousel — выключен флагом HOME_SLIDER_ENABLED (config/api.js) */}
+      {HOME_SLIDER_ENABLED && (
       <View style={styles.bannerContainer}>
         <View style={[styles.banner, { backgroundColor: banners[bannerIndex].backgroundColor }]}>
           <Text style={styles.bannerTitle}>{banners[bannerIndex].title}</Text>
@@ -259,30 +286,8 @@ const HomeScreen = ({ navigation }) => {
           ))}
         </View>
       </View>
+      )}
 
-
-      {/* Categories Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Категории</Text>
-          <TouchableOpacity onPress={navigateToAllProducts}>
-            <Text style={styles.seeAllText}>Все товары</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {(apiCategories?.length > 0 ? apiCategories : categories)?.length > 0 ? (
-          <FlatList
-            data={apiCategories?.length > 0 ? apiCategories : categories}
-            renderItem={renderCategory}
-            keyExtractor={(item) => item.id.toString()}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesList}
-          />
-        ) : (
-          <Text style={styles.emptyText}>Категории не найдены</Text>
-        )}
-      </View>
 
       {/* Вакансии (v1.1): блок главной, вход в список — «Все вакансии» */}
       {vacancies.length > 0 && (
@@ -316,6 +321,7 @@ const HomeScreen = ({ navigation }) => {
       {/* Доставка и контакты: блоки встанут сюда после API друга (home v2) */}
 
     </ScrollView>
+    </SafeAreaView>
   );
 };
 

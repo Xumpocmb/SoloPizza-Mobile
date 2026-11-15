@@ -95,3 +95,25 @@ describe('вход через Google', () => {
     expect(await apiService.getRefreshToken()).toBeNull();
   });
 });
+
+test('редактирование профиля: PATCH /me/ только с именем и фамилией, ответ сервера — новый user', async () => {
+  const { configureStore } = require('@reduxjs/toolkit');
+  const authReducer = require('../src/store/slices/authSlice').default;
+  const { updateProfile } = require('../src/store/slices/authSlice');
+  const sent = [];
+  global.fetch = jest.fn(async (url, options) => {
+    sent.push({ path: url.replace(/^.*\/api\/v1/, ''), method: options.method, body: JSON.parse(options.body) });
+    return {
+      status: 200, ok: true, statusText: '',
+      headers: { get: () => 'application/json' },
+      json: async () => ({ id: 37, first_name: 'Андрей', last_name: '', email: 'a@b.by' }),
+    };
+  });
+  await apiService.setAuthToken('jwt-a');
+  const store = configureStore({ reducer: { auth: authReducer } });
+
+  await store.dispatch(updateProfile({ first_name: 'Андрей', last_name: '' })).unwrap();
+
+  expect(sent).toEqual([{ path: '/me/', method: 'PATCH', body: { first_name: 'Андрей', last_name: '' } }]);
+  expect(store.getState().auth.user.first_name).toBe('Андрей');
+});

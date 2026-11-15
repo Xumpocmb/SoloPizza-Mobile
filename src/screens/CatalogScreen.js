@@ -13,6 +13,7 @@ import { num } from '../utils/money';
 import ProductImage from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, fetchCategories } from '../store/slices/productSlice';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DemoBanner from '../components/ui/DemoBanner';
 import BranchPicker from '../components/BranchPicker';
 import useAppTheme from '../theme/useAppTheme';
@@ -182,7 +183,8 @@ const CatalogScreen = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
+    // edges top: контент не уходит под строку состояния (Android рисует приложение во весь экран)
+    <SafeAreaView style={styles.container} edges={['top']}>
       <DemoBanner />
       <BranchPicker />
 
@@ -240,7 +242,7 @@ const CatalogScreen = ({ navigation }) => {
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 };
 

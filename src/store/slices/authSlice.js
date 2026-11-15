@@ -1,34 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import apiService from '../../services/apiService';
-
-// API базовый URL (нужно будет настроить под ваш сервер)
-const API_BASE_URL = 'http://localhost:8000/api';
-
-export const refreshToken = createAsyncThunk(
-  'auth/refreshToken',
-  async (_, { rejectWithValue }) => {
-    try {
-      const refreshToken = await AsyncStorage.getItem('refresh_token');
-      
-      if (!refreshToken) {
-        throw new Error('Нет refresh токена');
-      }
-      
-      const response = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, {
-        refresh: refreshToken,
-      });
-      
-      const { access } = response.data;
-      await AsyncStorage.setItem('access_token', access);
-      
-      return { access };
-    } catch (error) {
-      return rejectWithValue('Ошибка обновления токена');
-    }
-  }
-);
+import { API_ENDPOINTS } from '../../config/api';
+import { apiErrorMessage } from '../../utils/apiError';
 
 // ───────────────────────────────────────────────────────────
 // ДОБАВЛЕНО ПРИ АУДИТЕ 31.10.2026
@@ -41,17 +15,14 @@ export const refreshToken = createAsyncThunk(
  */
 export const updateProfile = createAsyncThunk(
   'auth/updateProfile',
-  async (userData, { rejectWithValue }) => {
+  async ({ first_name, last_name }, { rejectWithValue }) => {
     try {
-      const response = await axios.patch(
-        `${API_BASE_URL}/auth/profile/`,
-        userData,
-        { headers: { Authorization: `Bearer ${await AsyncStorage.getItem('access_token')}` } },
-      );
-      await AsyncStorage.setItem('user_data', JSON.stringify(response));
-      return response;
+      // сервер даёт менять только имя и фамилию; email — от Google/Apple
+      const user = await apiService.patch(API_ENDPOINTS.ME, { first_name, last_name });
+      await AsyncStorage.setItem('user_data', JSON.stringify(user));
+      return user;
     } catch (error) {
-      return rejectWithValue(error.response?.data || 'Не удалось обновить профиль');
+      return rejectWithValue(apiErrorMessage(error, 'Не удалось обновить профиль'));
     }
   }
 );
@@ -126,16 +97,6 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(refreshToken.fulfilled, (state, action) => {
-        state.accessToken = action.payload.access;
-      })
-      .addCase(refreshToken.rejected, (state) => {
-        state.accessToken = null;
-        state.refreshToken = null;
-        state.isAuthenticated = false;
-      })
-      
-      // Load Stored Tokens
       .addCase(loadStoredTokens.pending, (state) => {
         state.isLoading = true;
       })

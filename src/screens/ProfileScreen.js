@@ -11,11 +11,13 @@ import {
   Platform,
 } from 'react-native';
 import Alert from '../utils/alertShim';
+import Icon from '../components/ui/Icon';
 import useAppTheme from '../theme/useAppTheme';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout, updateProfile } from '../store/slices/authSlice';
-import { userService, authService } from '../services';
+import { authService } from '../services';
 import { loadCart } from '../store/slices/cartSlice';
+import orderService, { orderStats } from '../services/orderService';
 
 const ProfileScreen = ({ navigation }) => {
   const { colors } = useAppTheme();
@@ -26,28 +28,18 @@ const ProfileScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState(null);
-  const [formData, setFormData] = useState({
-    first_name: user?.first_name || '',
-    last_name: user?.last_name || '',
-    phone: user?.phone || '',
-    email: user?.email || '',
-  });
+  const [formData, setFormData] = useState({ first_name: '', last_name: '' });
   const [errors, setErrors] = useState({});
 
+  // Статистики на сервере нет — считаем по своим заказам; не загрузилось — блока нет
   const loadStats = async () => {
+    if (!user) return;
     try {
       setLoading(true);
-      const statsData = await userService.getStats();
-      setStats(statsData);
+      const orders = await orderService.getOrders();
+      setStats(orderStats(Array.isArray(orders) ? orders : []));
     } catch (error) {
-      console.error('Error loading stats:', error);
-      // Set fallback stats
-      setStats({
-        total_orders: 0,
-        total_spent: 0,
-        favorite_category: 'Пицца',
-        join_date: new Date().toISOString(),
-      });
+      setStats(null);
     } finally {
       setLoading(false);
     }
@@ -73,19 +65,6 @@ const ProfileScreen = ({ navigation }) => {
     if (!formData.first_name.trim()) {
       newErrors.first_name = 'Имя обязательно';
     }
-    if (!formData.last_name.trim()) {
-      newErrors.last_name = 'Фамилия обязательна';
-    }
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Телефон обязателен';
-    } else if (!/^\+?[1-9]\d{1,14}$/.test(formData.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Неверный формат телефона';
-    }
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email обязателен';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Неверный формат email';
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -97,23 +76,26 @@ const ProfileScreen = ({ navigation }) => {
     }
 
     try {
-      await dispatch(updateProfile(formData)).unwrap();
+      await dispatch(updateProfile({
+        first_name: formData.first_name.trim(),
+        last_name: formData.last_name.trim(),
+      })).unwrap();
       setIsEditing(false);
-      Alert.alert('Успешно', 'Профиль обновлен');
-    } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось обновить профиль');
+    } catch (message) {
+      Alert.alert('Ошибка', String(message));
     }
   };
 
   const handleCancelEdit = () => {
-    setFormData({
-      first_name: user?.first_name || '',
-      last_name: user?.last_name || '',
-      phone: user?.phone || '',
-      email: user?.email || '',
-    });
     setErrors({});
     setIsEditing(false);
+  };
+
+  const startEdit = () => {
+    // поля — из текущего пользователя: при монтировании экрана он мог ещё не загрузиться
+    setFormData({ first_name: user?.first_name || '', last_name: user?.last_name || '' });
+    setErrors({});
+    setIsEditing(true);
   };
 
   const handleLogout = () => {
@@ -155,32 +137,6 @@ const ProfileScreen = ({ navigation }) => {
       onPress: () => navigation.navigate('OrderHistory'),
     },
     {
-      title: 'Адреса доставки',
-      icon: '📍',
-      onPress: () => {
-        Alert.alert('В разработке', 'Функция будет доступна в следующих версиях');
-      },
-    },
-    {
-      title: 'Способы оплаты',
-      icon: '💳',
-      onPress: () => {
-        Alert.alert('В разработке', 'Функция будет доступна в следующих версиях');
-      },
-    },
-    {
-      title: 'Уведомления',
-      icon: '🔔',
-      onPress: () => {
-        Alert.alert('В разработке', 'Функция будет доступна в следующих версиях');
-      },
-    },
-    {
-      title: 'Контакты',
-      icon: '📞',
-      onPress: () => navigation.navigate('Contacts'),
-    },
-    {
       title: 'О приложении',
       icon: 'ℹ️',
       onPress: () => {
@@ -194,7 +150,7 @@ const ProfileScreen = ({ navigation }) => {
 
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [user?.id]);
 
   if (!user) {
     return (
@@ -241,11 +197,11 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={styles.title}>Профиль</Text>
         <TouchableOpacity
           style={styles.editButton}
-          onPress={() => setIsEditing(!isEditing)}
+          onPress={isEditing ? handleCancelEdit : startEdit}
+          accessibilityRole="button"
+          accessibilityLabel={isEditing ? 'Отменить изменения' : 'Изменить имя'}
         >
-          <Text style={styles.editButtonText}>
-            {isEditing ? 'Отмена' : 'Редактировать'}
-          </Text>
+          <Icon name={isEditing ? 'close' : 'edit'} size={22} color={colors.buttonText} />
         </TouchableOpacity>
       </View>
 
@@ -280,7 +236,7 @@ const ProfileScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Фамилия *</Text>
+              <Text style={styles.label}>Фамилия</Text>
               <TextInput
                 style={[
                   styles.input,
@@ -293,43 +249,6 @@ const ProfileScreen = ({ navigation }) => {
               />
               {errors.last_name && (
                 <Text style={styles.errorText}>{errors.last_name}</Text>
-              )}
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Телефон *</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  errors.phone && styles.inputError,
-                ]}
-                placeholder="+375 (XX) XXX-XX-XX"
-                placeholderTextColor={colors.textMuted}
-                value={formData.phone}
-                onChangeText={(value) => handleInputChange('phone', value)}
-                keyboardType="phone-pad"
-              />
-              {errors.phone && (
-                <Text style={styles.errorText}>{errors.phone}</Text>
-              )}
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email *</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  errors.email && styles.inputError,
-                ]}
-                placeholder="your@email.com"
-                placeholderTextColor={colors.textMuted}
-                value={formData.email}
-                onChangeText={(value) => handleInputChange('email', value)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              {errors.email && (
-                <Text style={styles.errorText}>{errors.email}</Text>
               )}
             </View>
 
@@ -373,28 +292,14 @@ const ProfileScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>Статистика</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.total_orders || 0}</Text>
+              <Text style={styles.statValue}>{stats.count}</Text>
               <Text style={styles.statLabel}>Заказов</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.total_spent || 0} ₽</Text>
+              <Text style={styles.statValue}>{stats.spent.toFixed(2)} BYN</Text>
               <Text style={styles.statLabel}>Потрачено</Text>
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.favorite_category || 'Пицца'}</Text>
-              <Text style={styles.statLabel}>Любимая категория</Text>
-            </View>
           </View>
-          {stats.join_date && (
-            <View style={styles.joinDateContainer}>
-              <Text style={styles.joinDateText}>
-                С нами с {new Date(stats.join_date).toLocaleDateString('ru-RU', {
-                  year: 'numeric',
-                  month: 'long'
-                })}
-              </Text>
-            </View>
-          )}
         </View>
       )}
 
@@ -452,12 +357,11 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.buttonText,
     textAlign: 'center',
   },
+  // на одной линии с заголовком: низ шапки, а не вся её высота вместе с зоной строки состояния
   editButton: {
     position: 'absolute',
-    right: 12,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
+    right: 8,
+    bottom: 6,
     padding: 8,
   },
   editButtonText: {
