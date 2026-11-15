@@ -43,7 +43,7 @@ describe('Сервисы', () => {
 
   it('у authService есть методы, которые вызывает LoginScreen', () => {
     const { authService } = require('../src/services');
-    ['login', 'register', 'logout', 'resetPassword', 'storeTokens', 'storeUserData']
+    ['loginWithGoogle', 'loginWithRefreshToken', 'logout', 'storeTokens', 'storeUserData']
       .forEach(m => expect(typeof authService[m]).toBe('function'));
   });
 
@@ -82,7 +82,7 @@ describe('Thunks', () => {
 
   it('authSlice экспортирует updateProfile (раньше его не было)', () => {
     const slice = require('../src/store/slices/authSlice');
-    ['loginUser', 'registerUser', 'logout', 'logoutUser', 'updateProfile',
+    ['logout', 'logoutUser', 'updateProfile',
      'loadStoredTokens', 'clearError']
       .forEach(t => expect(slice[t]).toBeDefined());
   });

@@ -1,55 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import apiService from '../../services/apiService';
 
 // API базовый URL (нужно будет настроить под ваш сервер)
 const API_BASE_URL = 'http://localhost:8000/api';
-
-// Асинхронные действия
-export const loginUser = createAsyncThunk(
-  'auth/loginUser',
-  async ({ username, password }, { rejectWithValue }) => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/auth/token/`, {
-        username,
-        password,
-      });
-      
-      const { access, refresh } = response.data;
-      
-      // Сохраняем токены в AsyncStorage
-      await AsyncStorage.setItem('access_token', access);
-      await AsyncStorage.setItem('refresh_token', refresh);
-      
-      return { access, refresh };
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.detail || 'Ошибка входа'
-      );
-    }
-  }
-);
-
-export const registerUser = createAsyncThunk(
-  'auth/registerUser',
-  async ({ username, email, password, firstName, lastName }, { rejectWithValue }) => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/auth/register/`, {
-        username,
-        email,
-        password,
-        first_name: firstName,
-        last_name: lastName,
-      });
-      
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data || 'Ошибка регистрации'
-      );
-    }
-  }
-);
 
 export const refreshToken = createAsyncThunk(
   'auth/refreshToken',
@@ -116,7 +71,8 @@ export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async () => {
     try {
-      await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user_data']);
+      await apiService.clearTokens();
+      await AsyncStorage.removeItem('user_data');
     } catch (error) {
       // Хранилище могло быть недоступно — состояние всё равно сбрасываем
     }
@@ -127,8 +83,8 @@ export const logoutUser = createAsyncThunk(
 export const loadStoredTokens = createAsyncThunk(
   'auth/loadStoredTokens',
   async () => {
-    const accessToken = await AsyncStorage.getItem('access_token');
-    const refreshToken = await AsyncStorage.getItem('refresh_token');
+    const accessToken = await apiService.getAuthToken();
+    const refreshToken = await apiService.getRefreshToken();
     const rawUser = await AsyncStorage.getItem('user_data');
 
     let user = null;
@@ -170,39 +126,6 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Login
-      .addCase(loginUser.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(loginUser.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.accessToken = action.payload.access;
-        state.refreshToken = action.payload.refresh;
-        state.isAuthenticated = true;
-        state.error = null;
-      })
-      .addCase(loginUser.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload;
-        state.isAuthenticated = false;
-      })
-      
-      // Register
-      .addCase(registerUser.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(registerUser.fulfilled, (state) => {
-        state.isLoading = false;
-        state.error = null;
-      })
-      .addCase(registerUser.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload;
-      })
-      
-      // Refresh Token
       .addCase(refreshToken.fulfilled, (state, action) => {
         state.accessToken = action.payload.access;
       })

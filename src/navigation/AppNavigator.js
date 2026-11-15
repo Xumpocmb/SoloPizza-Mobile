@@ -27,7 +27,6 @@ import ProductDetailScreen from '../screens/ProductDetailScreen';
 import CartScreen from '../screens/CartScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import LoginScreen from '../screens/LoginScreen';
-import RegisterScreen from '../screens/RegisterScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import OrderHistoryScreen from '../screens/OrderHistoryScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
@@ -72,7 +71,6 @@ const stackScreenOptions = {
 const sharedScreens = (
   <>
     <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Вход' }} />
-    <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Регистрация' }} />
     <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: 'Товар' }} />
     <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Оформление заказа' }} />
     <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} options={{ title: 'История заказов' }} />

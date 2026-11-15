@@ -1,73 +1,49 @@
-import apiService from './apiService';
-import { API_ENDPOINTS } from '../config/api';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GoogleSignin, isSuccessResponse } from '@react-native-google-signin/google-signin';
+import apiService from './apiService';
+import { API_ENDPOINTS, GOOGLE_WEB_CLIENT_ID } from '../config/api';
+
+const CART_TOKEN_KEY = 'cart_token'; // то же, что в cartService
 
 class AuthService {
   /**
-   * Login user.
-   *
-   * ИСПРАВЛЕНО ПРИ АУДИТЕ: была сигнатура login(email, password),
-   * но LoginScreen вызывает её ОДНИМ ОБЪЕКТОМ:
-   *   authService.login({ email, password, remember_me })
-   * → в password попадал undefined → «Неверный email или пароль» всегда.
-   *
-   * Теперь поддерживаются оба варианта вызова.
-   *
-   * @param {Object|string} emailOrPayload — { email, password, remember_me } либо email строкой
-   * @param {string} [password]
+   * Вход через Google: выбор аккаунта на телефоне → id_token → наш сервер.
+   * Сервер проверяет токен, находит/создаёт пользователя, забирает гостевую корзину
+   * (X-Cart-Token) и отдаёт пару JWT. null — пользователь закрыл выбор аккаунта.
+   * Только Android/iOS: на вебе у библиотеки нет реализации.
    */
-  async login(emailOrPayload, password) {
-    const payload =
-      typeof emailOrPayload === 'string'
-        ? { email: emailOrPayload, password }
-        : { ...emailOrPayload };
+  async loginWithGoogle() {
+    GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    const result = await GoogleSignin.signIn();
+    if (!isSuccessResponse(result)) return null;
 
-    try {
-      const response = await apiService.post(API_ENDPOINTS.AUTH.LOGIN, payload);
-
-      if (response.access && response.refresh) {
-        await apiService.setAuthToken(response.access);
-        await apiService.setRefreshToken(response.refresh);
-        
-        // Store user data if provided
-        if (response.user) {
-          await AsyncStorage.setItem('user_data', JSON.stringify(response.user));
-        }
-      }
-
-      return response;
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
-    }
-  }
-
-  // Register new user
-  async register(userData) {
-    try {
-      const response = await apiService.post(API_ENDPOINTS.AUTH.REGISTER, userData);
-      
-      if (response.access && response.refresh) {
-        await apiService.setAuthToken(response.access);
-        await apiService.setRefreshToken(response.refresh);
-        
-        if (response.user) {
-          await AsyncStorage.setItem('user_data', JSON.stringify(response.user));
-        }
-      }
-
-      return response;
-    } catch (error) {
-      console.error('Registration failed:', error);
-      throw error;
-    }
+    const cartToken = await AsyncStorage.getItem(CART_TOKEN_KEY);
+    const response = await apiService.makeRequest(API_ENDPOINTS.AUTH.GOOGLE, {
+      method: 'POST',
+      body: JSON.stringify({ id_token: result.data.idToken }),
+      headers: cartToken ? { 'X-Cart-Token': cartToken } : {},
+    });
+    await this.storeTokens(response.access, response.refresh);
+    await this.storeUserData(response.user);
+    await AsyncStorage.removeItem(CART_TOKEN_KEY); // гостевая корзина теперь корзина пользователя
+    return response.user;
   }
 
   // Logout user
   async logout() {
     try {
-      await apiService.removeAuthToken();
-      await AsyncStorage.removeItem('refresh_token');
+      const refresh = await apiService.getRefreshToken();
+      if (refresh) {
+        // refresh в чёрный список на сервере; не вышло (нет сети) — всё равно выходим локально
+        await apiService.post(API_ENDPOINTS.AUTH.LOGOUT, { refresh }).catch(() => {});
+      }
+      if (Platform.OS !== 'web') {
+        // иначе следующий вход молча возьмёт тот же Google-аккаунт без выбора
+        await GoogleSignin.signOut().catch(() => {});
+      }
+      await apiService.clearTokens();
       await AsyncStorage.removeItem('user_data');
     } catch (error) {
       console.error('Logout error:', error);
@@ -216,14 +192,6 @@ class AuthService {
     return me;
   }
 
-  /**
-   * Запросить письмо для восстановления пароля.
-   * LoginScreen → handleForgotPassword().
-   * @param {{email: string}} data
-   */
-  async resetPassword(data) {
-    return apiService.post(API_ENDPOINTS.USER.RESET_PASSWORD, data);
-  }
 }
 
 export default new AuthService();

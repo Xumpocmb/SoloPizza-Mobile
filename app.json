@@ -2,6 +2,7 @@
   "expo": {
     "name": "Solo Pizza",
     "slug": "SoloPizzaMobileApp",
+    "owner": "solopizzas-team",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -17,11 +18,12 @@
       "bundler": "metro"
     },
     "plugins": [
-      "@react-native-vector-icons/material-icons"
+      "@react-native-vector-icons/material-icons",
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {
-        "projectId": "73a74e7e-e527-46f5-8e91-d6f206c4ce73"
+        "projectId": "a08a0318-74b0-4f7d-9865-5af705593274"
       }
     }
   }

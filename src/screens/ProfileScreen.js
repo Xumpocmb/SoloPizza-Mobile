@@ -15,6 +15,7 @@ import useAppTheme from '../theme/useAppTheme';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout, updateProfile } from '../store/slices/authSlice';
 import { userService, authService } from '../services';
+import { loadCart } from '../store/slices/cartSlice';
 
 const ProfileScreen = ({ navigation }) => {
   const { colors } = useAppTheme();
@@ -137,6 +138,7 @@ const ProfileScreen = ({ navigation }) => {
     try {
       await authService.logout();
       dispatch(logout());
+      dispatch(loadCart()); // корзина пользователя осталась на сервере, у гостя — пустая
       navigation.navigate('Home');
     } catch (error) {
       console.error('Error logging out:', error);
@@ -210,12 +212,6 @@ const ProfileScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('Login')}
           >
             <Text style={styles.loginButtonText}>Войти</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.registerButton}
-            onPress={() => navigation.navigate('Register')}
-          >
-            <Text style={styles.registerButtonText}>Зарегистрироваться</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.registerButton}
