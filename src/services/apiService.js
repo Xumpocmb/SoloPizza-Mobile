@@ -160,7 +160,8 @@ class ApiService {
       const response = await send(requestOptions);
 
       // Handle 401 Unauthorized - try to refresh token
-      if (response.status === 401 && endpoint !== API_ENDPOINTS.AUTH.TOKEN_REFRESH) {
+      // /auth/* — сам вход и обновление: 401 там значит «токен не принят», обновлять нечего
+      if (response.status === 401 && !endpoint.startsWith('/auth/')) {
         try {
           await this.refreshAccessToken();
           // Retry the original request with new token
