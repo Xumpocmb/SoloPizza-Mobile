@@ -15,6 +15,7 @@ import ProductImage, { CATEGORY_GLYPHS } from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchFeaturedProducts, fetchCategories } from '../store/slices/productSlice';
 import { catalogService, productService, promoService, vacancyService } from '../services';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DemoBanner from '../components/ui/DemoBanner';
 import BranchPicker from '../components/BranchPicker';
 import WeeklySpecialBanner from '../components/WeeklySpecialBanner';
@@ -195,6 +196,8 @@ const HomeScreen = ({ navigation }) => {
   }
 
   return (
+    // edges top: контент не уходит под строку состояния (Android рисует приложение во весь экран)
+    <SafeAreaView style={styles.container} edges={['top']}>
     <ScrollView 
       style={styles.container}
       refreshControl={
@@ -316,6 +319,7 @@ const HomeScreen = ({ navigation }) => {
       {/* Доставка и контакты: блоки встанут сюда после API друга (home v2) */}
 
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
