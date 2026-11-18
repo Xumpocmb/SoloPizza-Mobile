@@ -173,6 +173,7 @@ export const restoreBranch = createAsyncThunk('products/restoreBranch', async ()
 
 const initialState = {
   products: [],
+  productsRequestId: null, // последний запрос fetchProducts (см. extraReducers)
   featuredProducts: [],
   categories: [],
   currentProduct: null,
@@ -224,11 +225,15 @@ const productSlice = createSlice({
       })
 
       // Список товаров
-      .addCase(fetchProducts.pending, (state) => {
+      .addCase(fetchProducts.pending, (state, action) => {
+        // ответы приходят в любом порядке: показываем только ответ на последний запрос
+        // (иначе «все товары», запрошенные раньше, затирают выбранную категорию)
+        state.productsRequestId = action.meta.requestId;
         state.loading = true;
         state.error = null;
       })
       .addCase(fetchProducts.fulfilled, (state, action) => {
+        if (action.meta.requestId !== state.productsRequestId) return;
         state.loading = false;
         state.products = action.payload.products;
         state.currentPage = action.payload.currentPage;
@@ -238,6 +243,7 @@ const productSlice = createSlice({
         state.isDemo = catalogService.isDemoActive();
       })
       .addCase(fetchProducts.rejected, (state, action) => {
+        if (action.meta.requestId !== state.productsRequestId) return;
         state.loading = false;
         state.products = [];
         state.error = action.payload;

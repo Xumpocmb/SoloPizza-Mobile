@@ -125,3 +125,16 @@ describe('дефект №14: профиль гостя не стучится в
     expect(apiService.get).not.toHaveBeenCalled();
   });
 });
+
+test('каталог: устаревший ответ «все товары» не затирает выбранную категорию', () => {
+  const reducer = require('../src/store/slices/productSlice').default;
+  const { fetchProducts } = require('../src/store/slices/productSlice');
+  const payload = (name) => ({ products: [{ id: 1, name }], currentPage: 1, totalPages: 1, hasNext: false, hasPrevious: false });
+  let state = reducer(undefined, { type: '@@init' });
+  state = reducer(state, fetchProducts.pending('all', {}));
+  state = reducer(state, fetchProducts.pending('burgers', { categoryId: 3 }));
+  state = reducer(state, fetchProducts.fulfilled(payload('Бургер'), 'burgers', { categoryId: 3 }));
+  state = reducer(state, fetchProducts.fulfilled(payload('Пицца'), 'all', {})); // пришёл последним, но устарел
+  expect(state.products.map((p) => p.name)).toEqual(['Бургер']);
+  expect(state.loading).toBe(false);
+});
