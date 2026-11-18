@@ -378,25 +378,25 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   productImage: {
     width: '100%',
-    height: 300, // contain: фото целиком, без обрезки; выше — опции уезжают за экран
+    height: 240, // contain: фото целиком, без обрезки; выше — опции уезжают за экран
   },
   productInfo: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: colors.cardBg,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   productName: {
-    fontSize: 24,
+    fontSize: 21,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 6,
-    lineHeight: 30,
+    marginBottom: 4,
+    lineHeight: 26,
   },
   productDescription: {
-    fontSize: 15,
+    fontSize: 14,
     color: colors.textMuted,
-    lineHeight: 21,
+    lineHeight: 19,
   },
   basePrice: {
     fontSize: 20,
@@ -431,12 +431,12 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   optionButton: {
     backgroundColor: colors.cardBg,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: colors.divider,
-    minWidth: 90,
+    minWidth: 64,
     alignItems: 'center',
     shadowColor: colors.text,
     shadowOffset: { width: 0, height: 1 },
@@ -454,7 +454,7 @@ const makeStyles = (colors) => StyleSheet.create({
     elevation: 4,
   },
   optionText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
     textAlign: 'center',
@@ -503,7 +503,7 @@ const makeStyles = (colors) => StyleSheet.create({
   optionPrice: {
     fontSize: 13,
     color: colors.textMuted,
-    marginTop: 4,
+    marginTop: 2,
     fontWeight: '500',
   },
   optionPriceActive: {
