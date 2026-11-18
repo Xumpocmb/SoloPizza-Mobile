@@ -18,6 +18,7 @@ import { fetchProducts, fetchCategories } from '../store/slices/productSlice';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BranchPicker from '../components/BranchPicker';
 import OfflineNotice from '../components/ui/OfflineNotice';
+import { NO_INTERNET_MESSAGE } from '../services/apiService';
 import useAppTheme from '../theme/useAppTheme';
 
 /**
@@ -179,7 +180,12 @@ const CatalogScreen = ({ navigation, route }) => {
   if (error && !products.length) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <OfflineNotice message={error} onRetry={() => loadData(true)} />
+        <OfflineNotice
+          {...(error === NO_INTERNET_MESSAGE
+            ? {}
+            : { title: 'Не удалось загрузить каталог', text: error, icon: 'error-outline' })}
+          onRetry={() => loadData(true)}
+        />
       </SafeAreaView>
     );
   }

@@ -1,6 +1,6 @@
 /**
- * Экран «нет данных»: без интернета (по умолчанию) или с текстом ошибки сервера.
- * Показывают главная и каталог вместо пустых блоков.
+ * Экран «данных нет»: без интернета (по умолчанию) или другая причина (свой заголовок и текст).
+ * Главная, каталог и карточка товара показывают его вместо пустоты.
  */
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -8,20 +8,32 @@ import Icon from './Icon';
 import useAppTheme from '../../theme/useAppTheme';
 import { NO_INTERNET_MESSAGE } from '../../services/apiService';
 
-export default function OfflineNotice({ message = NO_INTERNET_MESSAGE, onRetry }) {
+export default function OfflineNotice({
+  title = NO_INTERNET_MESSAGE,
+  text = 'Проверьте интернет и попробуйте снова.',
+  icon = 'wifi-off',
+  onRetry,
+  onBack,
+}) {
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
-  const offline = message === NO_INTERNET_MESSAGE;
   return (
     <View style={styles.container}>
-      <Icon name={offline ? 'wifi-off' : 'error-outline'} size={48} color={colors.textMuted} />
-      <Text style={styles.title}>{message}</Text>
-      {offline && <Text style={styles.text}>Проверьте интернет и попробуйте снова.</Text>}
-      {onRetry && (
-        <TouchableOpacity style={styles.button} onPress={onRetry} accessibilityRole="button">
-          <Text style={styles.buttonText}>Повторить</Text>
-        </TouchableOpacity>
-      )}
+      <Icon name={icon} size={44} color={colors.textMuted} />
+      <Text style={styles.title}>{title}</Text>
+      {!!text && <Text style={styles.text}>{text}</Text>}
+      <View style={styles.actions}>
+        {onRetry && (
+          <TouchableOpacity style={styles.primary} onPress={onRetry} accessibilityRole="button">
+            <Text style={styles.primaryText}>Повторить</Text>
+          </TouchableOpacity>
+        )}
+        {onBack && (
+          <TouchableOpacity style={styles.secondary} onPress={onBack} accessibilityRole="button">
+            <Text style={styles.secondaryText}>Назад</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -32,8 +44,8 @@ const makeStyles = (colors) =>
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 10,
-      padding: 32,
+      gap: 8,
+      paddingHorizontal: 32,
       backgroundColor: colors.bg,
     },
     title: {
@@ -44,19 +56,36 @@ const makeStyles = (colors) =>
     },
     text: {
       fontSize: 14,
+      lineHeight: 20,
       color: colors.textMuted,
       textAlign: 'center',
     },
-    button: {
-      marginTop: 8,
+    actions: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 12,
+    },
+    primary: {
       backgroundColor: colors.accent,
       borderRadius: 12,
-      paddingHorizontal: 24,
+      paddingHorizontal: 22,
       paddingVertical: 10,
     },
-    buttonText: {
+    primaryText: {
       color: colors.buttonText,
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '700',
+    },
+    secondary: {
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.divider,
+      paddingHorizontal: 22,
+      paddingVertical: 10,
+    },
+    secondaryText: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '600',
     },
   });
