@@ -25,7 +25,7 @@ test('на телефоне токены входа лежат в SecureStore, �
 describe('вход через Google', () => {
   const { GoogleSignin } = require('@react-native-google-signin/google-signin');
   const authService = require('../src/services/authService').default;
-  const { GOOGLE_WEB_CLIENT_ID } = require('../src/config/api');
+  const { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } = require('../src/config/api');
   let calls;
   let reply;
 
@@ -54,7 +54,7 @@ describe('вход через Google', () => {
 
     const user = await authService.loginWithGoogle();
 
-    expect(GoogleSignin.configure).toHaveBeenCalledWith({ webClientId: GOOGLE_WEB_CLIENT_ID });
+    expect(GoogleSignin.configure).toHaveBeenCalledWith({ webClientId: GOOGLE_WEB_CLIENT_ID, iosClientId: GOOGLE_IOS_CLIENT_ID });
     expect(calls).toHaveLength(1);
     expect(calls[0].path).toBe('/auth/google/');
     expect(calls[0].body).toEqual({ id_token: 'google-id-token' });

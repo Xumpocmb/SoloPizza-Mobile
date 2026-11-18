@@ -31,8 +31,9 @@ export const PRIVACY_URL = 'https://solo-pizza.by/privacy/';
 // Web client из Google Cloud (проект Solo Pizza App). Не секрет: в id_token он стоит в aud,
 // по нему сервер (GOOGLE_OAUTH_CLIENT_IDS) проверяет, что токен выдан нашему приложению.
 export const GOOGLE_WEB_CLIENT_ID = '101927534807-9t8jcutga2af40hd2ppjbnlogm2uulov.apps.googleusercontent.com';
-// iOS-клиент Google (bundle by.solopizza.app). Пока null — на iPhone кнопки Google нет: без него вход падает.
-export const GOOGLE_IOS_CLIENT_ID = null;
+// iOS-клиент Google (bundle by.solopizza.app). id_token всё равно выдаётся на Web client (webClientId),
+// поэтому серверу (GOOGLE_OAUTH_CLIENT_IDS) этот ID добавлять не нужно. URL-схема — в app.json.
+export const GOOGLE_IOS_CLIENT_ID = '101927534807-s7ldodoqvid6qdvpcg5t78denkh8ua71.apps.googleusercontent.com';
 
 // ПРОМО/АКЦИИ. На 02.11.2026 эндпоинта акций на бэкенде НЕТ (путь /promo/active/
 // отдавал 404). Согласованный путь будущего эндпоинта — '/promos/active/'

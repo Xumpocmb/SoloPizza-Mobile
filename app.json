@@ -21,7 +21,13 @@
     "plugins": [
       "@react-native-vector-icons/material-icons",
       "expo-secure-store",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.101927534807-s7ldodoqvid6qdvpcg5t78denkh8ua71"
+        }
+      ]
     ],
     "extra": {
       "eas": {
