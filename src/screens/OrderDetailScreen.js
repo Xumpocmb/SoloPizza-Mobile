@@ -113,10 +113,11 @@ export default function OrderDetailScreen({ route, navigation }) {
             <Text style={styles.text}>{money(line.total)}</Text>
           </View>
         ))}
+        {/* сервер отдаёт цены строк уже со скидкой — здесь только справка, не вычитание */}
         {num(order.discount_amount) > 0 && (
           <View style={styles.row}>
-            <Text style={styles.text}>Скидка</Text>
-            <Text style={[styles.text, styles.discount]}>−{money(order.discount_amount)}</Text>
+            <Text style={styles.muted}>В том числе скидка</Text>
+            <Text style={[styles.muted, styles.discount]}>{money(order.discount_amount)}</Text>
           </View>
         )}
         {order.delivery_type === 'delivery' && (
