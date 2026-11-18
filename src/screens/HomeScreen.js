@@ -10,7 +10,9 @@ import {
   RefreshControl,
   Dimensions,
   Platform,
+  Linking,
 } from 'react-native';
+import Icon from '../components/ui/Icon';
 import ProductImage, { CATEGORY_GLYPHS } from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchFeaturedProducts, fetchCategories } from '../store/slices/productSlice';
@@ -95,6 +97,12 @@ const HomeScreen = ({ navigation }) => {
       console.error('Error loading API data:', error);
     }
   };
+
+  // Instagram и реквизиты компании (как в футере сайта) — из /contacts/
+  const [contacts, setContacts] = useState(null);
+  useEffect(() => {
+    catalogService.getContacts().then(setContacts).catch(() => setContacts(null));
+  }, []);
 
   useEffect(() => {
     if (!HOME_SLIDER_ENABLED) return undefined;
@@ -330,7 +338,34 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Доставка и контакты: блоки встанут сюда после API друга (home v2) */}
+      {/* В самом конце — как футер сайта: Instagram, реквизиты, © */}
+      <View style={styles.footer}>
+        {!!contacts?.instagram_url && (
+          <TouchableOpacity
+            style={styles.instagram}
+            onPress={() => Linking.openURL(contacts.instagram_url)}
+            accessibilityRole="link"
+          >
+            <Icon name="photo-camera" size={20} color={colors.accent} />
+            <Text style={styles.instagramText}>Мы в Instagram</Text>
+          </TouchableOpacity>
+        )}
+        {!!contacts?.company && (
+          <View style={styles.company}>
+            <Text style={styles.companyText}>{contacts.company.legal_name}</Text>
+            {!!contacts.company.unpp && <Text style={styles.companyText}>УНП: {contacts.company.unpp}</Text>}
+            {!!contacts.company.address && <Text style={styles.companyText}>{contacts.company.address}</Text>}
+            {!!contacts.company.bank_name && (
+              <Text style={styles.companyText}>
+                Банк: {contacts.company.bank_name}
+                {contacts.company.bank_bik ? ` (БИК: ${contacts.company.bank_bik})` : ''}
+                {contacts.company.account_number ? ` / Р/с: ${contacts.company.account_number}` : ''}
+              </Text>
+            )}
+          </View>
+        )}
+        <Text style={styles.companyText}>© {new Date().getFullYear()} Solo Pizza. Все права защищены.</Text>
+      </View>
 
     </ScrollView>
     </SafeAreaView>
@@ -419,6 +454,34 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: colors.text,
+  },
+  footer: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    gap: 12,
+  },
+  instagram: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.cardBg,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    padding: 14,
+  },
+  instagramText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  company: {
+    gap: 2,
+  },
+  companyText: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.textMuted,
   },
   reviewCard: {
     backgroundColor: colors.cardBg,
