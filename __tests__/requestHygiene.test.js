@@ -80,22 +80,18 @@ describe('дефект №2: дубли запросов каталога', () =
     expect(callsTo('/products/')).toBe(2); // полный список по-прежнему из кэша
   });
 
-  test('демо-ответ не кэшируется: оживший сервер виден следующим запросом', async () => {
-    apiService.get.mockRejectedValue(new Error('HTTP 404'));
-    const demo = await catalogService.getCategories();
-    expect(catalogService.isDemoActive()).toBe(true);
-    expect(demo.length).toBeGreaterThan(0);
+  test('ошибка сети не кэшируется: после восстановления связи запрос снова идёт в сеть', async () => {
+    apiService.get.mockImplementation((path) =>
+      path === '/meta/' ? Promise.resolve(META) : Promise.reject({ status: 0, message: 'Нет подключения к интернету' }),
+    );
+    await expect(catalogService.getCategories()).rejects.toMatchObject({ status: 0 });
 
-    apiService.get.mockReset();
     apiService.get.mockImplementation((path) => {
       if (path === '/meta/') return Promise.resolve(META);
       if (path === '/categories/') return Promise.resolve(CATEGORIES);
       return Promise.reject(new Error('HTTP 404'));
     });
-    const live = await catalogService.getCategories();
-    expect(callsTo('/categories/')).toBe(1); // ушли в сеть, не в кэш демо
-    expect(live).toEqual(CATEGORIES);
-    expect(catalogService.isDemoActive()).toBe(false);
+    expect(await catalogService.getCategories()).toEqual(CATEGORIES);
   });
 });
 

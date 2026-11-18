@@ -180,7 +180,6 @@ const initialState = {
   branches: [],
   branchId: null,
   // true, когда каталог работает на демо-данных (API ещё не задеплоен)
-  isDemo: false,
   currentPage: 1,
   totalPages: 1,
   hasNext: false,
@@ -217,7 +216,6 @@ const productSlice = createSlice({
       .addCase(fetchCategories.fulfilled, (state, action) => {
         state.loading = false;
         state.categories = action.payload;
-        state.isDemo = catalogService.isDemoActive();
       })
       .addCase(fetchCategories.rejected, (state, action) => {
         state.loading = false;
@@ -240,7 +238,6 @@ const productSlice = createSlice({
         state.totalPages = action.payload.totalPages;
         state.hasNext = action.payload.hasNext;
         state.hasPrevious = action.payload.hasPrevious;
-        state.isDemo = catalogService.isDemoActive();
       })
       .addCase(fetchProducts.rejected, (state, action) => {
         if (action.meta.requestId !== state.productsRequestId) return;
@@ -283,7 +280,6 @@ const productSlice = createSlice({
       .addCase(fetchBranches.fulfilled, (state, action) => {
         state.branches = action.payload;
         state.branchId = catalogService.getBranchId();
-        state.isDemo = catalogService.isDemoActive();
       })
       .addCase(fetchBranches.rejected, (state, action) => {
         state.error = action.payload;
@@ -295,7 +291,6 @@ const productSlice = createSlice({
         state.branchId = action.payload;
         state.products = [];
         state.currentProduct = null;
-        state.isDemo = catalogService.isDemoActive();
       });
   },
 });

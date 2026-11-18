@@ -39,8 +39,7 @@
  */
 
 import apiService from './apiService';
-import { API_ENDPOINTS, USE_DEMO_FALLBACK } from '../config/api';
-import { resolveDemo } from './demoCatalog';
+import { API_ENDPOINTS } from '../config/api';
 
 /** Время жизни тёплого кэша каталога: меню меняется редко, навигация — часто. */
 const CACHE_TTL_MS = 60000;
@@ -56,17 +55,11 @@ function uiProduct(product) {
 class CatalogService {
   constructor() {
     this.branchId = null;
-    this._demo = false;
     this._categoriesCache = null;
     this._productsCache = null;
     this._cacheBranchId = null;
     this._cache = new Map();
     this._inflight = new Map();
-  }
-
-  /** true, если данные сейчас из демо-набора (API недоступен). */
-  isDemoActive() {
-    return this._demo;
   }
 
   getBranchId() {
@@ -116,7 +109,7 @@ class CatalogService {
     const promise = producer().then(
       (value) => {
         this._inflight.delete(key);
-        if (!this._demo) this._cache.set(key, { at: Date.now(), value });
+        this._cache.set(key, { at: Date.now(), value });
         return value;
       },
       (error) => {
@@ -128,28 +121,10 @@ class CatalogService {
     return promise;
   }
 
-  /**
-   * Единая точка запроса: при сетевой ошибке/404 и включённом USE_DEMO_FALLBACK
-   * отдаёт демо-данные той же формы и помечает сервис демо-режимом.
-   */
-  async _request(path, params = {}, slugParam = null) {
-    try {
-      // 5 секунд вместо общих 10: демо-режим включается быстрее,
-      // silent: ожидаемые сбои не светят красными тостами
-      const response = await apiService.get(path, params, {
-        timeout: 5000,
-        silent: USE_DEMO_FALLBACK,
-      });
-      // успех сбрасывает демо-флаг: плашка исчезает без перезапуска
-      this._demo = false;
-      return response;
-    } catch (error) {
-      if (!USE_DEMO_FALLBACK) throw error;
-      this._demo = true;
-      const demo = resolveDemo(path, params, slugParam);
-      if (demo === null) throw error;
-      return demo;
-    }
+  /** Единая точка запроса каталога. Нет сети — ошибка (экран покажет «Нет подключения к интернету»). */
+  async _request(path, params = {}) {
+    // silent: без интернета сбой ожидаем — не засоряем консоль красными ошибками
+    return apiService.get(path, params, { silent: true });
   }
 
   async getMeta(options) {
@@ -203,7 +178,6 @@ class CatalogService {
     const detail = await this._request(
       API_ENDPOINTS.CATALOG.CATEGORY_DETAIL(slug),
       { branch_id: branchId },
-      slug,
     );
     if (detail && Array.isArray(detail.products)) {
       return { ...detail, products: detail.products.map(uiProduct) };
@@ -259,7 +233,6 @@ class CatalogService {
     const detail = await this._request(
       API_ENDPOINTS.CATALOG.PRODUCT_DETAIL(slug),
       { branch_id: branchId },
-      slug,
     );
     return uiProduct(detail);
   }

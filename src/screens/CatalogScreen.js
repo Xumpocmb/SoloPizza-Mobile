@@ -16,8 +16,8 @@ import ProductImage from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, fetchCategories } from '../store/slices/productSlice';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DemoBanner from '../components/ui/DemoBanner';
 import BranchPicker from '../components/BranchPicker';
+import OfflineNotice from '../components/ui/OfflineNotice';
 import useAppTheme from '../theme/useAppTheme';
 
 /**
@@ -176,21 +176,17 @@ const CatalogScreen = ({ navigation, route }) => {
     );
   }
 
-  if (error) {
+  if (error && !products.length) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Ошибка загрузки каталога</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => loadData()}>
-          <Text style={styles.retryButtonText}>Повторить</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <OfflineNotice message={error} onRetry={() => loadData(true)} />
+      </SafeAreaView>
     );
   }
 
   return (
     // edges top: контент не уходит под строку состояния (Android рисует приложение во весь экран)
     <SafeAreaView style={styles.container} edges={['top']}>
-      <DemoBanner />
       <BranchPicker />
 
       {chips.length > 0 && (
@@ -269,23 +265,6 @@ const makeStyles = (colors) => StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: colors.textMuted,
-  },
-  errorText: {
-    fontSize: 16,
-    color: colors.error,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: colors.buttonText,
-    fontSize: 16,
-    fontWeight: '600',
   },
   categoriesContainer: {
     backgroundColor: colors.cardBg,

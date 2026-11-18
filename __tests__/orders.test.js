@@ -19,8 +19,8 @@ test('ошибки DRF: поля для подсветки и одна стро�
   const closed = { status: 400, data: { detail: ['Заказы временно не принимаются: филиал «Тексер» сегодня не работает.'] } };
   expect(apiErrorMessage(closed)).toBe('Заказы временно не принимаются: филиал «Тексер» сегодня не работает.');
 
-  expect(apiFieldErrors({ status: 0, message: 'Проблемы с подключением к интернету' })).toBeNull();
-  expect(apiErrorMessage({ status: 0, message: 'Проблемы с подключением к интернету' })).toBe('Проблемы с подключением к интернету');
+  expect(apiFieldErrors({ status: 0, message: 'Нет подключения к интернету' })).toBeNull();
+  expect(apiErrorMessage({ status: 0, message: 'Нет подключения к интернету' })).toBe('Нет подключения к интернету');
   expect(apiErrorMessage(undefined, 'запасной')).toBe('запасной');
 });
 

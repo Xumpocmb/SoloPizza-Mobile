@@ -17,6 +17,8 @@ const tokenStore =
         remove: (key) => SecureStore.deleteItemAsync(key),
       };
 
+export const NO_INTERNET_MESSAGE = 'Нет подключения к интернету';
+
 class ApiService {
   constructor() {
     this.baseURL = API_BASE_URL;
@@ -214,10 +216,11 @@ class ApiService {
 
   // Handle errors
   handleError(error) {
-    if (error.name === 'TypeError' && error.message === 'Network request failed') {
+    // fetch падает TypeError'ом без ответа сервера: на телефоне «Network request failed», в браузере «Failed to fetch»
+    if (error?.name === 'TypeError') {
       return {
         status: 0,
-        message: 'Проблемы с подключением к интернету',
+        message: NO_INTERNET_MESSAGE,
         isNetworkError: true,
       };
     }

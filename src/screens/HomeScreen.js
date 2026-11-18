@@ -13,12 +13,12 @@ import {
   Linking,
 } from 'react-native';
 import Icon from '../components/ui/Icon';
+import OfflineNotice from '../components/ui/OfflineNotice';
 import ProductImage, { CATEGORY_GLYPHS } from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchFeaturedProducts, fetchCategories } from '../store/slices/productSlice';
 import { catalogService, productService, promoService, vacancyService } from '../services';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DemoBanner from '../components/ui/DemoBanner';
 import BranchPicker from '../components/BranchPicker';
 import PromoCarousel from '../components/PromoCarousel';
 import useAppTheme from '../theme/useAppTheme';
@@ -63,6 +63,8 @@ const HomeScreen = ({ navigation }) => {
 
 
 
+  const [offline, setOffline] = useState(false);
+
   const loadApiData = async (force = false) => {
     try {
       const [categoriesData, productsData, promosData, weeklyData, vacanciesData, announcementsData] = await Promise.all([
@@ -93,8 +95,11 @@ const HomeScreen = ({ navigation }) => {
         }));
         setBanners(apiBanners);
       }
+      setOffline(false);
     } catch (error) {
-      console.error('Error loading API data:', error);
+      // нет сети (status 0) — вместо пустой главной сообщение «Нет подключения к интернету»
+      setOffline(error?.status === 0);
+      if (error?.status !== 0) console.error('Error loading API data:', error);
     }
   };
 
@@ -197,6 +202,14 @@ const HomeScreen = ({ navigation }) => {
     loadApiData();
   }, [branchId]);
 
+  if (offline) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <OfflineNotice onRetry={onRefresh} />
+      </SafeAreaView>
+    );
+  }
+
   if (loading && !featuredProducts?.length && !categories?.length) {
     return (
       <View style={styles.loadingContainer}>
@@ -215,7 +228,6 @@ const HomeScreen = ({ navigation }) => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <DemoBanner />
       <BranchPicker />
       {announcements.map((item) => (
         <View key={item.id} style={styles.announcement}>

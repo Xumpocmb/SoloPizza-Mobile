@@ -15,15 +15,6 @@ import { Platform } from 'react-native';
 export const API_BASE_URL =
   Platform.OS === 'web' ? '/api/v1' : 'https://solo-pizza.by/api/v1'; // Production URL
 
-// ДЕМО-РЕЖИМ. Актуально на 02.11.2026: app_api ЗАДЕПЛОЕН, боевой каталог живой
-// (/meta/, /branches/, /categories/, /products/ отвечают 200 — проверено живыми
-// запросами, см. state/api-status.md в репо памяти). Прежняя приписка «на боевом
-// все /api/v1/* отвечают 404» УСТАРЕЛА и убрана 02.11.2026 (дефект №4).
-// Пока true: демо-данные ТОЙ ЖЕ ФОРМЫ подставляются ТОЛЬКО когда сервер недоступен
-// или ответил 404 (страховка на offline/деградацию); успех сбрасывает флаг.
-// Когда страховка станет не нужна — поставить false и удалить demoCatalog.js.
-export const USE_DEMO_FALLBACK = true;
-
 // Политика обработки персональных данных на сайте: ссылка у галочек согласия
 // и в магазинах приложений
 export const PRIVACY_URL = 'https://solo-pizza.by/privacy/';
