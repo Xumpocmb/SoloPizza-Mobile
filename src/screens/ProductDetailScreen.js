@@ -11,6 +11,7 @@ import { useDispatch } from 'react-redux';
 import Alert from '../utils/alertShim';
 import ProductImage from '../components/ui/ProductImage';
 import Icon from '../components/ui/Icon';
+import OfflineNotice from '../components/ui/OfflineNotice';
 import useAppTheme from '../theme/useAppTheme';
 import { num } from '../utils/money';
 import { addToCart } from '../store/slices/cartSlice';
@@ -101,11 +102,15 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [toast, setToast] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0); // «Повторить» после обрыва сети
   const toastTimer = useRef(null);
   useEffect(() => () => clearTimeout(toastTimer.current), []);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setLoadError(null);
     productService
       .getProductDetail(productId)
       .then((data) => {
@@ -114,8 +119,10 @@ const ProductDetailScreen = ({ route, navigation }) => {
         setSelection(initialSelection(data));
         navigation.setOptions({ title: data.name }); // заголовок — название товара, а не «Товар»
       })
-      .catch(() => {
-        if (active) setProduct(null);
+      .catch((error) => {
+        if (!active) return;
+        setProduct(null);
+        setLoadError(error);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -123,7 +130,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
     return () => {
       active = false;
     };
-  }, [productId, navigation]);
+  }, [productId, navigation, reloadKey]);
 
   if (loading) {
     return (
@@ -135,13 +142,15 @@ const ProductDetailScreen = ({ route, navigation }) => {
   }
 
   if (!product || !selection?.variant) {
+    const offline = loadError?.status === 0;
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Товар не найден</Text>
-        <TouchableOpacity style={styles.addToCartButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.addToCartButtonText}>Назад</Text>
-        </TouchableOpacity>
-      </View>
+      <OfflineNotice
+        title="Упс, всё куда-то пропало"
+        text={offline ? 'Нет подключения к интернету. Проверьте интернет и попробуйте снова.' : 'Товар не найден или больше не продаётся.'}
+        icon={offline ? 'wifi-off' : 'search-off'}
+        onRetry={offline ? () => setReloadKey((key) => key + 1) : undefined}
+        onBack={() => navigation.goBack()}
+      />
     );
   }
 
@@ -527,11 +536,7 @@ const makeStyles = (colors) => StyleSheet.create({
     borderRadius: 14,
     borderWidth: 2,
     borderColor: colors.divider,
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    // без elevation/тени: на Android тень просвечивает сквозь полупрозрачный фон выбранной ячейки прямоугольником
   },
   addonItemActive: {
     backgroundColor: colors.accentRgba,

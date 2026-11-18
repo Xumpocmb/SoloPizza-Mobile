@@ -10,13 +10,15 @@ import {
   RefreshControl,
   Dimensions,
   Platform,
+  Linking,
 } from 'react-native';
+import Icon from '../components/ui/Icon';
+import OfflineNotice from '../components/ui/OfflineNotice';
 import ProductImage, { CATEGORY_GLYPHS } from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchFeaturedProducts, fetchCategories } from '../store/slices/productSlice';
 import { catalogService, productService, promoService, vacancyService } from '../services';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DemoBanner from '../components/ui/DemoBanner';
 import BranchPicker from '../components/BranchPicker';
 import PromoCarousel from '../components/PromoCarousel';
 import useAppTheme from '../theme/useAppTheme';
@@ -61,6 +63,8 @@ const HomeScreen = ({ navigation }) => {
 
 
 
+  const [offline, setOffline] = useState(false);
+
   const loadApiData = async (force = false) => {
     try {
       const [categoriesData, productsData, promosData, weeklyData, vacanciesData, announcementsData] = await Promise.all([
@@ -91,10 +95,19 @@ const HomeScreen = ({ navigation }) => {
         }));
         setBanners(apiBanners);
       }
+      setOffline(false);
     } catch (error) {
-      console.error('Error loading API data:', error);
+      // нет сети (status 0) — вместо пустой главной сообщение «Нет подключения к интернету»
+      setOffline(error?.status === 0);
+      if (error?.status !== 0) console.error('Error loading API data:', error);
     }
   };
+
+  // Instagram и реквизиты компании (как в футере сайта) — из /contacts/
+  const [contacts, setContacts] = useState(null);
+  useEffect(() => {
+    catalogService.getContacts().then(setContacts).catch(() => setContacts(null));
+  }, []);
 
   useEffect(() => {
     if (!HOME_SLIDER_ENABLED) return undefined;
@@ -189,6 +202,14 @@ const HomeScreen = ({ navigation }) => {
     loadApiData();
   }, [branchId]);
 
+  if (offline) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <OfflineNotice onRetry={onRefresh} />
+      </SafeAreaView>
+    );
+  }
+
   if (loading && !featuredProducts?.length && !categories?.length) {
     return (
       <View style={styles.loadingContainer}>
@@ -207,7 +228,6 @@ const HomeScreen = ({ navigation }) => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <DemoBanner />
       <BranchPicker />
       {announcements.map((item) => (
         <View key={item.id} style={styles.announcement}>
@@ -290,17 +310,6 @@ const HomeScreen = ({ navigation }) => {
       )}
 
 
-      {/* Книга замечаний и предложений — как solo-pizza.by/reviews/ */}
-      <View style={styles.section}>
-        <View style={styles.reviewCard}>
-          <Text style={styles.reviewTitle}>Книга замечаний и предложений</Text>
-          <Text style={styles.reviewText}>Расскажите, что понравилось и что нам улучшить.</Text>
-          <TouchableOpacity style={styles.reviewButton} onPress={() => navigation.navigate('Reviews')}>
-            <Text style={styles.reviewButtonText}>Оставить отзыв</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       {/* Вакансии (v1.1): блок главной, вход в список — «Все вакансии» */}
       {vacancies.length > 0 && (
         <View style={styles.section}>
@@ -330,7 +339,45 @@ const HomeScreen = ({ navigation }) => {
           />
         </View>
       )}
-      {/* Доставка и контакты: блоки встанут сюда после API друга (home v2) */}
+      {/* Книга замечаний и предложений — как solo-pizza.by/reviews/ */}
+      <View style={styles.section}>
+        <View style={styles.reviewCard}>
+          <Text style={styles.reviewTitle}>Книга замечаний и предложений</Text>
+          <Text style={styles.reviewText}>Расскажите, что понравилось и что нам улучшить.</Text>
+          <TouchableOpacity style={styles.reviewButton} onPress={() => navigation.navigate('Reviews')}>
+            <Text style={styles.reviewButtonText}>Оставить отзыв</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* В самом конце — как футер сайта: Instagram, реквизиты, © */}
+      <View style={styles.footer}>
+        {!!contacts?.instagram_url && (
+          <TouchableOpacity
+            style={styles.instagram}
+            onPress={() => Linking.openURL(contacts.instagram_url)}
+            accessibilityRole="link"
+          >
+            <Icon name="photo-camera" size={20} color={colors.accent} />
+            <Text style={styles.instagramText}>Мы в Instagram</Text>
+          </TouchableOpacity>
+        )}
+        {!!contacts?.company && (
+          <View style={styles.company}>
+            <Text style={styles.companyText}>{contacts.company.legal_name}</Text>
+            {!!contacts.company.unpp && <Text style={styles.companyText}>УНП: {contacts.company.unpp}</Text>}
+            {!!contacts.company.address && <Text style={styles.companyText}>{contacts.company.address}</Text>}
+            {!!contacts.company.bank_name && (
+              <Text style={styles.companyText}>
+                Банк: {contacts.company.bank_name}
+                {contacts.company.bank_bik ? ` (БИК: ${contacts.company.bank_bik})` : ''}
+                {contacts.company.account_number ? ` / Р/с: ${contacts.company.account_number}` : ''}
+              </Text>
+            )}
+          </View>
+        )}
+        <Text style={styles.companyText}>© {new Date().getFullYear()} Solo Pizza. Все права защищены.</Text>
+      </View>
 
     </ScrollView>
     </SafeAreaView>
@@ -419,6 +466,34 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: colors.text,
+  },
+  footer: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    gap: 12,
+  },
+  instagram: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.cardBg,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    padding: 14,
+  },
+  instagramText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  company: {
+    gap: 2,
+  },
+  companyText: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.textMuted,
   },
   reviewCard: {
     backgroundColor: colors.cardBg,

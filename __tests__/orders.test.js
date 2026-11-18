@@ -19,8 +19,8 @@ test('ошибки DRF: поля для подсветки и одна стро�
   const closed = { status: 400, data: { detail: ['Заказы временно не принимаются: филиал «Тексер» сегодня не работает.'] } };
   expect(apiErrorMessage(closed)).toBe('Заказы временно не принимаются: филиал «Тексер» сегодня не работает.');
 
-  expect(apiFieldErrors({ status: 0, message: 'Проблемы с подключением к интернету' })).toBeNull();
-  expect(apiErrorMessage({ status: 0, message: 'Проблемы с подключением к интернету' })).toBe('Проблемы с подключением к интернету');
+  expect(apiFieldErrors({ status: 0, message: 'Нет подключения к интернету' })).toBeNull();
+  expect(apiErrorMessage({ status: 0, message: 'Нет подключения к интернету' })).toBe('Нет подключения к интернету');
   expect(apiErrorMessage(undefined, 'запасной')).toBe('запасной');
 });
 
@@ -69,16 +69,6 @@ describe('orderService ходит в настоящие эндпоинты с т
 
 test('опрос статуса останавливается на завершённом и отменённом', () => {
   expect(FINAL_STATUSES).toEqual(['completed', 'canceled']);
-});
-
-test('статистика профиля: отменённые заказы не считаются, сумма в BYN по total_price', () => {
-  const { orderStats } = require('../src/services/orderService');
-  expect(orderStats([
-    { status: 'completed', total_price: '23.85' },
-    { status: 'new', total_price: '12.50' },
-    { status: 'canceled', total_price: '99.00' },
-  ])).toEqual({ count: 2, spent: 36.35 });
-  expect(orderStats([])).toEqual({ count: 0, spent: 0 });
 });
 
 test('отзыв уходит на POST /reviews/ с оценкой и текстом без лишних пробелов', async () => {

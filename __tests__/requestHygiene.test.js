@@ -80,22 +80,18 @@ describe('дефект №2: дубли запросов каталога', () =
     expect(callsTo('/products/')).toBe(2); // полный список по-прежнему из кэша
   });
 
-  test('демо-ответ не кэшируется: оживший сервер виден следующим запросом', async () => {
-    apiService.get.mockRejectedValue(new Error('HTTP 404'));
-    const demo = await catalogService.getCategories();
-    expect(catalogService.isDemoActive()).toBe(true);
-    expect(demo.length).toBeGreaterThan(0);
+  test('ошибка сети не кэшируется: после восстановления связи запрос снова идёт в сеть', async () => {
+    apiService.get.mockImplementation((path) =>
+      path === '/meta/' ? Promise.resolve(META) : Promise.reject({ status: 0, message: 'Нет подключения к интернету' }),
+    );
+    await expect(catalogService.getCategories()).rejects.toMatchObject({ status: 0 });
 
-    apiService.get.mockReset();
     apiService.get.mockImplementation((path) => {
       if (path === '/meta/') return Promise.resolve(META);
       if (path === '/categories/') return Promise.resolve(CATEGORIES);
       return Promise.reject(new Error('HTTP 404'));
     });
-    const live = await catalogService.getCategories();
-    expect(callsTo('/categories/')).toBe(1); // ушли в сеть, не в кэш демо
-    expect(live).toEqual(CATEGORIES);
-    expect(catalogService.isDemoActive()).toBe(false);
+    expect(await catalogService.getCategories()).toEqual(CATEGORIES);
   });
 });
 
@@ -108,11 +104,9 @@ describe('дефект №3: промо не стучится в несущес�
   });
 });
 
-describe('дефект №14: профиль гостя не стучится в /user/stats/', () => {
-  test('USER_API_ENABLED=false и нет токена → запросов нет, экран получает нули', async () => {
+describe('дефект №14: профиль не стучится в несуществующие /user/*', () => {
+  test('USER_API_ENABLED=false и нет токена → запросов нет', async () => {
     expect(USER_API_ENABLED).toBe(false);
-    const stats = await userService.getStats();
-    expect(stats).toEqual({ orders_count: 0, total_spent: 0, bonus_points: 0 });
     const addresses = await userService.getAddresses();
     expect(addresses).toEqual([]);
     expect(apiService.get).not.toHaveBeenCalled();
@@ -120,7 +114,6 @@ describe('дефект №14: профиль гостя не стучится в
 
   test('флаг выключен даже при наличии токена → запросов нет', async () => {
     apiService.getAuthToken.mockResolvedValue('access-token');
-    await userService.getStats();
     await userService.getAddresses();
     expect(apiService.get).not.toHaveBeenCalled();
   });

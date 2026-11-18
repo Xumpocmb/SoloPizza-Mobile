@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,119 +8,127 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  useWindowDimensions,
+  ScrollView,
 } from 'react-native';
 import { num } from '../utils/money';
 import ProductImage from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, fetchCategories } from '../store/slices/productSlice';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DemoBanner from '../components/ui/DemoBanner';
 import BranchPicker from '../components/BranchPicker';
+import OfflineNotice from '../components/ui/OfflineNotice';
+import { NO_INTERNET_MESSAGE } from '../services/apiService';
 import useAppTheme from '../theme/useAppTheme';
+
+/**
+ * Каталог — один список всех товаров, разделённый на категории (как якоря на странице):
+ * чип прокручивает к разделу, при листании подсвечивается чип текущего раздела.
+ * Разделы строятся по полю category (slug) из /products/; у старого сервера его нет —
+ * тогда список без заголовков, чипы скрыты.
+ */
+export const buildRows = (products, categories) => {
+  const rows = [];
+  const headerIndex = {};
+  const bySlug = {};
+  products.forEach((product) => {
+    (bySlug[product.category] = bySlug[product.category] || []).push(product);
+  });
+  const known = new Set(categories.map((c) => c.slug));
+  const pushItems = (items, category) => {
+    for (let i = 0; i < items.length; i += 2) {
+      rows.push({ key: `r${items[i].id}`, type: 'row', category, items: items.slice(i, i + 2) });
+    }
+  };
+  categories.forEach((category) => {
+    const items = bySlug[category.slug];
+    if (!items?.length) return;
+    headerIndex[category.id] = rows.length;
+    rows.push({ key: `h${category.id}`, type: 'header', category });
+    pushItems(items, category);
+  });
+  // товары без известной категории (или старый сервер без поля category) — в конце, без заголовка
+  pushItems(products.filter((product) => !known.has(product.category)), null);
+  return { rows, headerIndex };
+};
 
 const CatalogScreen = ({ navigation, route }) => {
   const { colors } = useAppTheme();
+  const { width: windowWidth } = useWindowDimensions();
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
-  const { products, categories, loading, error, branchId } = useSelector(state => state.products);
-  
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const { products, categories, loading, error, branchId } = useSelector((state) => state.products);
+
   const [refreshing, setRefreshing] = useState(false);
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [activeId, setActiveId] = useState(null);
+  const listRef = useRef(null);
+  const categoriesRef = useRef(null);
+  const chipLayouts = useRef({});
+  const retries = useRef(0);
 
-  const loadData = async (reset = true, force = false) => {
+  const { rows, headerIndex } = useMemo(() => buildRows(products, categories), [products, categories]);
+  const chips = categories.filter((category) => headerIndex[category.id] != null);
+
+  const loadData = async (force = false) => {
     try {
-      if (reset) {
-        setPage(1);
-        setHasMore(true);
-      } else {
-        setLoadingMore(true);
-      }
-      
-      const [categoriesResponse] = await Promise.all([
-        dispatch(fetchCategories(force)).unwrap(),
-        // список тянем сразу с серверным фильтром категории;
-        // контракт app_api не отдаёт поле category в товаре, поэтому клиентская
-        // фильтрация по категории невозможна — только серверный параметр
-        dispatch(fetchProducts({
-          categoryId: selectedCategory?.id !== 'all' ? selectedCategory?.id : undefined,
-          force,
-        })).unwrap(),
-      ]);
-      void categoriesResponse;
-
-      // Update pagination
-      if (reset) {
-        setPage(2);
-      } else {
-        setPage(prev => prev + 1);
-      }
-      
-      setHasMore(false); // пагинации в app_api нет, список приходит целиком
-    } catch (error) {
-      console.error('Ошибка загрузки данных:', error);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  const loadMore = () => {
-    if (!loadingMore && hasMore) {
-      loadData(false);
+      // весь каталог одним запросом: разделы делим в приложении по category
+      await Promise.all([dispatch(fetchCategories(force)).unwrap(), dispatch(fetchProducts({ force })).unwrap()]);
+    } catch (loadError) {
+      console.error('Ошибка загрузки данных:', loadError);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
     // pull-to-refresh обходит тёплый кэш (дефект №2)
-    await loadData(true, true);
+    await loadData(true);
     setRefreshing(false);
   };
 
-  // Размер, соус и добавки выбираются в карточке: без варианта заказ не оформить
-  const handleAddToCart = (product) => {
-    navigation.navigate('ProductDetail', { productId: product.id });
+  // Меню зависит от филиала: при смене перезагружаем каталог
+  useEffect(() => {
+    loadData();
+  }, [branchId]);
+
+  // активный чип — по центру ряда. Ряд — ScrollView: в FlatList onLayout чипа даёт x внутри ячейки (0)
+  const centerChip = (id) => {
+    const layout = chipLayouts.current[id];
+    if (!layout || !categoriesRef.current) return;
+    const x = Math.max(0, layout.x - (windowWidth - layout.width) / 2);
+    categoriesRef.current.scrollTo({ x, animated: true });
+  };
+  useEffect(() => {
+    if (activeId != null) centerChip(activeId);
+  }, [activeId]);
+
+  const scrollToCategory = (id) => {
+    const index = headerIndex[id];
+    if (index == null) return false;
+    setActiveId(id);
+    retries.current = 0;
+    listRef.current?.scrollToIndex({ index, animated: true });
+    return true;
   };
 
-  const filterProducts = () => {
-    let filtered = [...products];
+  // при листании активен раздел первой видимой строки
+  // FlatList требует неизменную функцию: пустые зависимости, setActiveId стабилен
+  const onViewableItemsChanged = useCallback(({ viewableItems }) => {
+    const first = viewableItems.find((viewable) => viewable.item.category);
+    if (first) setActiveId(first.item.category.id);
+  }, []);
 
-    // Фильтрация по категории НЕ делается локально: контракт app_api не отдаёт
-    // поле category в списке товаров, категорию фильтрует сервер по query-параметру
-    // (getProducts({ category }) в catalogService). Поиска в приложении нет (решение владельца).
+  // категория с главной (id) или 'all' из пустой корзины — ждём, пока появятся разделы
+  const requestedCategoryId = route?.params?.categoryId;
+  useEffect(() => {
+    if (requestedCategoryId == null || !rows.length) return;
+    if (requestedCategoryId === 'all') listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    else scrollToCategory(requestedCategoryId);
+    navigation.setParams({ categoryId: undefined });
+  }, [requestedCategoryId, rows.length]);
 
-    // Сортировки нет намеренно: порядок задаёт сервер
-    // (app_api: category__order, name). Убрана по решению пользователя.
-
-    setFilteredProducts(filtered);
-  };
-
-  const renderCategory = ({ item }) => {
-    const isAll = item.id === 'all';
-    const selected = isAll ? !selectedCategory : selectedCategory?.id === item.id;
-    return (
-      <TouchableOpacity
-        style={[
-          styles.categoryItem,
-          selected && styles.selectedCategory
-        ]}
-        onPress={() => setSelectedCategory(isAll ? null : selected ? null : item)}
-      >
-        <Text style={[
-          styles.categoryText,
-          selected && styles.selectedCategoryText
-        ]}>
-          {item.name}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderProduct = ({ item }) => (
+  const renderProduct = (item) => (
     <TouchableOpacity
+      key={item.id}
       style={styles.productCard}
       onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
     >
@@ -137,9 +145,10 @@ const CatalogScreen = ({ navigation, route }) => {
         </Text>
         <View style={styles.productFooter}>
           <Text style={styles.productPrice}>{num(item.price ?? item.base_price).toFixed(2)} BYN</Text>
+          {/* размер, соус и добавки выбираются в карточке: без варианта заказ не оформить */}
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => handleAddToCart(item)}
+            onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
           >
             <Text style={styles.addButtonText}>+</Text>
           </TouchableOpacity>
@@ -148,29 +157,18 @@ const CatalogScreen = ({ navigation, route }) => {
     </TouchableOpacity>
   );
 
+  const renderRow = ({ item: row }) =>
+    row.type === 'header' ? (
+      <Text style={styles.sectionHeader}>{row.category.name}</Text>
+    ) : (
+      <View style={styles.productRow}>
+        {row.items.map(renderProduct)}
+        {row.items.length === 1 && <View style={styles.productSpacer} />}
+      </View>
+    );
 
-  // Меню зависит от филиала: при смене перезагружаем каталог
-  useEffect(() => {
-    loadData();
-  }, [branchId]);
-
-  useEffect(() => {
-    filterProducts();
-  }, [products, selectedCategory]);
-
-  useEffect(() => {
-    loadData(true);
-  }, [selectedCategory]);
-
-  // категория с главной: выбрать её и сбросить параметр, чтобы повторный переход тоже срабатывал
-  const requestedCategoryId = route?.params?.categoryId;
-  useEffect(() => {
-    if (requestedCategoryId == null) return;
-    setSelectedCategory({ id: requestedCategoryId });
-    navigation.setParams({ categoryId: undefined });
-  }, [requestedCategoryId]);
-
-  if (loading && !refreshing) {
+  // на весь экран — только первая загрузка
+  if (loading && !refreshing && !products.length) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#079b59" />
@@ -179,42 +177,66 @@ const CatalogScreen = ({ navigation, route }) => {
     );
   }
 
-  if (error) {
+  if (error && !products.length) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Ошибка загрузки каталога</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadData}>
-          <Text style={styles.retryButtonText}>Повторить</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <OfflineNotice
+          {...(error === NO_INTERNET_MESSAGE
+            ? {}
+            : { title: 'Не удалось загрузить каталог', text: error, icon: 'error-outline' })}
+          onRetry={() => loadData(true)}
+        />
+      </SafeAreaView>
     );
   }
 
   return (
     // edges top: контент не уходит под строку состояния (Android рисует приложение во весь экран)
     <SafeAreaView style={styles.container} edges={['top']}>
-      <DemoBanner />
       <BranchPicker />
 
-      {/* Категории */}
-      {categories.length > 0 && (
+      {chips.length > 0 && (
         <View style={styles.categoriesContainer}>
-          <FlatList
-            data={[{ id: 'all', name: 'Все' }, ...categories]}
-            renderItem={renderCategory}
-            keyExtractor={(item) => String(item.id)}
+          <ScrollView
+            ref={categoriesRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesList}
-          />
+          >
+            {chips.map((category) => {
+              const active = activeId === category.id;
+              return (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[styles.categoryItem, active && styles.selectedCategory]}
+                  onPress={() => scrollToCategory(category.id)}
+                  onLayout={(event) => {
+                    chipLayouts.current[category.id] = event.nativeEvent.layout;
+                  }}
+                >
+                  <Text style={[styles.categoryText, active && styles.selectedCategoryText]}>{category.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
       )}
 
-      {/* Список товаров */}
       <FlatList
-        data={filteredProducts}
-        renderItem={renderProduct}
-        keyExtractor={(item) => item.id.toString()}
+        ref={listRef}
+        data={rows}
+        renderItem={renderRow}
+        keyExtractor={(row) => row.key}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+        // строка ещё не отрисована (высота неизвестна): прыжок по средней высоте, затем повтор —
+        // по мере отрисовки строк высоты уточняются и прокрутка встаёт точно (до 6 попыток)
+        onScrollToIndexFailed={(info) => {
+          listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+          if (retries.current >= 6) return;
+          retries.current += 1;
+          setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: false }), 80);
+        }}
         // 02.11.2026: тяжёлые медиа сайта (png 200–400 kB) — держим окно
         // виртуализации узким, чтобы офскрин-карточки не тянули картинки
         // сразу; на веб ленивость даёт loading="lazy" в ProductImage
@@ -222,31 +244,11 @@ const CatalogScreen = ({ navigation, route }) => {
         initialNumToRender={6}
         maxToRenderPerBatch={6}
         removeClippedSubviews={Platform.OS !== 'web'}
-        numColumns={2}
         contentContainerStyle={styles.productsList}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[colors.accent]}
-          />
-        }
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.1}
-        ListFooterComponent={() => {
-          if (loadingMore) {
-            return (
-              <View style={styles.loadingMoreContainer}>
-                <ActivityIndicator size="small" color="#079b59" />
-              </View>
-            );
-          }
-          return null;
-        }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>Товары не найдены</Text>
-            <Text style={styles.emptySubtext}>Попробуйте изменить фильтры поиска</Text>
           </View>
         }
       />
@@ -269,23 +271,6 @@ const makeStyles = (colors) => StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: colors.textMuted,
-  },
-  errorText: {
-    fontSize: 16,
-    color: colors.error,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: colors.buttonText,
-    fontSize: 16,
-    fontWeight: '600',
   },
   categoriesContainer: {
     backgroundColor: colors.cardBg,
@@ -317,44 +302,23 @@ const makeStyles = (colors) => StyleSheet.create({
   selectedCategoryText: {
     color: colors.buttonText,
   },
-  sortContainer: {
-    backgroundColor: colors.cardBg,
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  sortLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: colors.text,
-  },
-  sortButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  sortButton: {
-    backgroundColor: colors.bg,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  selectedSortButton: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  sortButtonText: {
-    fontSize: 12,
-    color: colors.text,
-    fontWeight: '500',
-  },
-  selectedSortButtonText: {
-    color: colors.buttonText,
-  },
   productsList: {
     padding: 15,
+  },
+  sectionHeader: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 14,
+    marginBottom: 6,
+    marginHorizontal: 5,
+  },
+  productRow: {
+    flexDirection: 'row',
+  },
+  productSpacer: {
+    flex: 1,
+    margin: 5,
   },
   productCard: {
     flex: 1,
@@ -425,12 +389,6 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
   },
-  emptySubtext: {
-    fontSize: 14,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: 8,
-  },
   popularBadge: {
     position: 'absolute',
     top: 8,
@@ -445,10 +403,6 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.buttonText,
     fontSize: 10,
     fontWeight: '600',
-  },
-  loadingMoreContainer: {
-    paddingVertical: 20,
-    alignItems: 'center',
   },
 });
 

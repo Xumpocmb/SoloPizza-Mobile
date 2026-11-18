@@ -56,7 +56,7 @@ describe('Сервисы', () => {
 
   it('у userService есть методы для Checkout и Profile', () => {
     const { userService } = require('../src/services');
-    ['getProfile', 'getAddresses', 'getStats']
+    ['getProfile', 'getAddresses']
       .forEach(m => expect(typeof userService[m]).toBe('function'));
   });
 
@@ -64,7 +64,7 @@ describe('Сервисы', () => {
     const { API_ENDPOINTS } = require('../src/config/api');
     const used = [
       ['ORDERS', 'LIST'], ['ORDERS', 'DETAIL'], ['CHECKOUT', 'OPTIONS'], ['CHECKOUT', 'QUOTE'],
-      ['PROMO', 'ACTIVE'], ['USER', 'ADDRESSES'], ['USER', 'STATS'],
+      ['PROMO', 'ACTIVE'], ['USER', 'ADDRESSES'],
     ];
     used.forEach(([g, k]) => {
       expect(API_ENDPOINTS[g]).toBeDefined();

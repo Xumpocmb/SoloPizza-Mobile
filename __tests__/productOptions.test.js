@@ -89,3 +89,20 @@ test('опции позиции корзины одной строкой', () =>
 test('старые позиции корзины с toppings тоже описываются', () => {
   expect(cartItemOptions({ size: { name: 'Большая' }, toppings: [{ name: 'Сыр' }] })).toBe('Большая · Добавки: Сыр');
 });
+
+test('каталог: разделы по категориям в порядке категорий, строки по 2 карточки, без категории — в конце', () => {
+  const { buildRows } = require('../src/screens/CatalogScreen');
+  const categories = [{ id: 1, slug: 'picca', name: 'Пицца' }, { id: 2, slug: 'sousy', name: 'Соусы' }, { id: 3, slug: 'pusto', name: 'Пусто' }];
+  const products = [
+    { id: 10, category: 'sousy' },
+    { id: 11, category: 'picca' },
+    { id: 12, category: 'picca' },
+    { id: 13, category: 'picca' },
+    { id: 14 }, // старый сервер / неизвестная категория
+  ];
+  const { rows, headerIndex } = buildRows(products, categories);
+  expect(rows.map((r) => (r.type === 'header' ? `#${r.category.slug}` : r.items.map((p) => p.id).join('+')))).toEqual([
+    '#picca', '11+12', '13', '#sousy', '10', '14',
+  ]);
+  expect(headerIndex).toEqual({ 1: 0, 2: 3 }); // у пустой категории заголовка нет
+});

@@ -17,6 +17,8 @@ const tokenStore =
         remove: (key) => SecureStore.deleteItemAsync(key),
       };
 
+export const NO_INTERNET_MESSAGE = 'Нет подключения к интернету';
+
 class ApiService {
   constructor() {
     this.baseURL = API_BASE_URL;
@@ -151,7 +153,11 @@ class ApiService {
         }, timeoutMs);
       });
       return Promise.race([
-        fetch(url, { ...opts, signal: controller.signal }),
+        // fetch отклоняется только без ответа сервера (нет сети, DNS, обрыв). Текст ошибки платформы
+        // («fetch failed: java.net.UnknownHostException…») пользователю непонятен — заменяем своим
+        fetch(url, { ...opts, signal: controller.signal }).catch((cause) => {
+          throw { status: 0, message: NO_INTERNET_MESSAGE, isNetworkError: true, cause };
+        }),
         timeoutPromise,
       ]).finally(() => clearTimeout(timer));
     };
@@ -214,18 +220,10 @@ class ApiService {
 
   // Handle errors
   handleError(error) {
-    if (error.name === 'TypeError' && error.message === 'Network request failed') {
+    if (error?.message === 'Request timeout') {
       return {
         status: 0,
-        message: 'Проблемы с подключением к интернету',
-        isNetworkError: true,
-      };
-    }
-    
-    if (error.message === 'Request timeout') {
-      return {
-        status: 0,
-        message: 'Превышено время ожидания запроса',
+        message: 'Сервер не отвечает. Проверьте интернет и попробуйте снова.',
         isTimeoutError: true,
       };
     }

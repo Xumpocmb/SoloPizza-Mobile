@@ -98,6 +98,7 @@ const makeStyles = (colors) =>
       gap: 6,
       marginHorizontal: 16,
       marginTop: 12,
+      marginBottom: 12, // иначе в каталоге плашка сливается с полосой категорий того же цвета
       paddingVertical: 10,
       paddingHorizontal: 14,
       borderRadius: 12,
