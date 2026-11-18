@@ -36,9 +36,9 @@ export const compactDescription = (text) =>
     .filter(Boolean)
     .join(', '); // как на сайте (AddToCartForm)
 
-const Chip = ({ styles, active, label, price, onPress }) => (
+const Chip = ({ styles, active, label, price, onPress, style }) => (
   <TouchableOpacity
-    style={[styles.optionButton, active && styles.optionButtonActive]}
+    style={[styles.optionButton, active && styles.optionButtonActive, style]}
     onPress={onPress}
   >
     <Text style={[styles.optionText, active && styles.optionTextActive]}>{label}</Text>
@@ -208,11 +208,12 @@ const ProductDetailScreen = ({ route, navigation }) => {
         {variants.length > 1 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{variant.size ? 'Размер' : 'Вариант'}</Text>
-            <View style={styles.optionsContainer}>
+            <View style={[styles.optionsContainer, styles.sizeRow]}>
               {variants.map((v) => (
                 <Chip
                   key={v.id}
                   styles={styles}
+                  style={styles.sizeChip}
                   label={variantLabel(v)}
                   active={variant.id === v.id}
                   onPress={() => setSelection(withVariant(selection, v))}
@@ -418,6 +419,15 @@ const makeStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+  },
+  // размеры — на всю ширину, поровну (их 2–4)
+  sizeRow: {
+    flexWrap: 'nowrap',
+    gap: 10,
+  },
+  sizeChip: {
+    flex: 1,
+    minWidth: 0,
   },
   optionButton: {
     backgroundColor: colors.cardBg,
