@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  useWindowDimensions,
+  ScrollView,
 } from 'react-native';
 import { num } from '../utils/money';
 import ProductImage from '../components/ui/ProductImage';
@@ -20,6 +22,7 @@ import useAppTheme from '../theme/useAppTheme';
 
 const CatalogScreen = ({ navigation, route }) => {
   const { colors } = useAppTheme();
+  const { width: windowWidth } = useWindowDimensions();
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
   const { products, categories, loading, error, branchId } = useSelector(state => state.products);
@@ -108,6 +111,10 @@ const CatalogScreen = ({ navigation, route }) => {
           selected && styles.selectedCategory
         ]}
         onPress={() => setSelectedCategory(isAll ? null : selected ? null : item)}
+        onLayout={(event) => {
+          chipLayouts.current[item.id] = event.nativeEvent.layout;
+          if (selected) centerChip(item.id); // ряд только что отрисован — прокрутка, как только известна позиция
+        }}
       >
         <Text style={[
           styles.categoryText,
@@ -162,6 +169,20 @@ const CatalogScreen = ({ navigation, route }) => {
     loadData(true);
   }, [selectedCategory]);
 
+  // выбранный чип — по центру ряда: иначе «Соусы»/«Напитки» остаются за правым краем
+  // Ряд — ScrollView, а не FlatList: в FlatList onLayout чипа даёт x внутри своей ячейки (всегда 0)
+  const categoriesRef = useRef(null);
+  const chipLayouts = useRef({});
+  const centerChip = (id) => {
+    const layout = chipLayouts.current[id];
+    if (!layout || !categoriesRef.current) return;
+    const x = Math.max(0, layout.x - (windowWidth - layout.width) / 2);
+    categoriesRef.current.scrollTo({ x, animated: true });
+  };
+  useEffect(() => {
+    centerChip(selectedCategory?.id ?? 'all');
+  }, [selectedCategory]);
+
   // категория с главной: выбрать её и сбросить параметр, чтобы повторный переход тоже срабатывал
   const requestedCategoryId = route?.params?.categoryId;
   useEffect(() => {
@@ -170,7 +191,8 @@ const CatalogScreen = ({ navigation, route }) => {
     navigation.setParams({ categoryId: undefined });
   }, [requestedCategoryId]);
 
-  if (loading && !refreshing) {
+  // на весь экран — только первая загрузка; при смене категории ряд чипов остаётся (и его прокрутка)
+  if (loading && !refreshing && !products.length) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#079b59" />
@@ -199,14 +221,16 @@ const CatalogScreen = ({ navigation, route }) => {
       {/* Категории */}
       {categories.length > 0 && (
         <View style={styles.categoriesContainer}>
-          <FlatList
-            data={[{ id: 'all', name: 'Все' }, ...categories]}
-            renderItem={renderCategory}
-            keyExtractor={(item) => String(item.id)}
+          <ScrollView
+            ref={categoriesRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesList}
-          />
+          >
+            {[{ id: 'all', name: 'Все' }, ...categories].map((item) => (
+              <React.Fragment key={String(item.id)}>{renderCategory({ item })}</React.Fragment>
+            ))}
+          </ScrollView>
         </View>
       )}
 
