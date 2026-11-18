@@ -527,11 +527,7 @@ const makeStyles = (colors) => StyleSheet.create({
     borderRadius: 14,
     borderWidth: 2,
     borderColor: colors.divider,
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    // без elevation/тени: на Android тень просвечивает сквозь полупрозрачный фон выбранной ячейки прямоугольником
   },
   addonItemActive: {
     backgroundColor: colors.accentRgba,
