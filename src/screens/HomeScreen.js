@@ -290,17 +290,6 @@ const HomeScreen = ({ navigation }) => {
       )}
 
 
-      {/* Книга замечаний и предложений — как solo-pizza.by/reviews/ */}
-      <View style={styles.section}>
-        <View style={styles.reviewCard}>
-          <Text style={styles.reviewTitle}>Книга замечаний и предложений</Text>
-          <Text style={styles.reviewText}>Расскажите, что понравилось и что нам улучшить.</Text>
-          <TouchableOpacity style={styles.reviewButton} onPress={() => navigation.navigate('Reviews')}>
-            <Text style={styles.reviewButtonText}>Оставить отзыв</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       {/* Вакансии (v1.1): блок главной, вход в список — «Все вакансии» */}
       {vacancies.length > 0 && (
         <View style={styles.section}>
@@ -330,6 +319,17 @@ const HomeScreen = ({ navigation }) => {
           />
         </View>
       )}
+      {/* Книга замечаний и предложений — как solo-pizza.by/reviews/ */}
+      <View style={styles.section}>
+        <View style={styles.reviewCard}>
+          <Text style={styles.reviewTitle}>Книга замечаний и предложений</Text>
+          <Text style={styles.reviewText}>Расскажите, что понравилось и что нам улучшить.</Text>
+          <TouchableOpacity style={styles.reviewButton} onPress={() => navigation.navigate('Reviews')}>
+            <Text style={styles.reviewButtonText}>Оставить отзыв</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Доставка и контакты: блоки встанут сюда после API друга (home v2) */}
 
     </ScrollView>
