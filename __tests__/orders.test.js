@@ -80,3 +80,14 @@ test('статистика профиля: отменённые заказы н�
   ])).toEqual({ count: 2, spent: 36.35 });
   expect(orderStats([])).toEqual({ count: 0, spent: 0 });
 });
+
+test('отзыв уходит на POST /reviews/ с оценкой и текстом без лишних пробелов', async () => {
+  const reviewService = require('../src/services/reviewService').default;
+  const sent = [];
+  global.fetch = jest.fn(async (url, options) => {
+    sent.push({ path: url.replace(/^.*\/api\/v1/, ''), method: options.method, body: JSON.parse(options.body) });
+    return { status: 201, ok: true, statusText: '', headers: { get: () => 'application/json' }, json: async () => ({ id: 1 }) };
+  });
+  await reviewService.create({ rating: 5, text: '  Очень вкусно!  ' });
+  expect(sent).toEqual([{ path: '/reviews/', method: 'POST', body: { rating: 5, text: 'Очень вкусно!' } }]);
+});

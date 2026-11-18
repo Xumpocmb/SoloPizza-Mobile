@@ -9,7 +9,10 @@
     "ios": {
       "bundleIdentifier": "by.solopizza.app",
       "supportsTablet": false,
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "by.solopizza.app",

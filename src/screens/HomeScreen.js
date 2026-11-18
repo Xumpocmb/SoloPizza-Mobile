@@ -290,6 +290,17 @@ const HomeScreen = ({ navigation }) => {
       )}
 
 
+      {/* Книга замечаний и предложений — как solo-pizza.by/reviews/ */}
+      <View style={styles.section}>
+        <View style={styles.reviewCard}>
+          <Text style={styles.reviewTitle}>Книга замечаний и предложений</Text>
+          <Text style={styles.reviewText}>Расскажите, что понравилось и что нам улучшить.</Text>
+          <TouchableOpacity style={styles.reviewButton} onPress={() => navigation.navigate('Reviews')}>
+            <Text style={styles.reviewButtonText}>Оставить отзыв</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Вакансии (v1.1): блок главной, вход в список — «Все вакансии» */}
       {vacancies.length > 0 && (
         <View style={styles.section}>
@@ -408,6 +419,36 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: colors.text,
+  },
+  reviewCard: {
+    backgroundColor: colors.cardBg,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    padding: 16,
+    gap: 8,
+  },
+  reviewTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  reviewText: {
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  reviewButton: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    backgroundColor: colors.accent,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  reviewButtonText: {
+    color: colors.buttonText,
+    fontSize: 15,
+    fontWeight: '700',
   },
   vacanciesList: {
     paddingHorizontal: 16,
