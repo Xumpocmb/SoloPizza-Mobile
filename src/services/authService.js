@@ -31,6 +31,21 @@ class AuthService {
     return response.user;
   }
 
+  /**
+   * Удаление аккаунта (обязательно для Google Play и App Store): DELETE /me/.
+   * Сервер удаляет пользователя, заказы остаются у пиццерии без привязки к нему.
+   * Ошибка сервера пробрасывается — тогда аккаунт жив и телефон не чистим.
+   */
+  async deleteAccount() {
+    await apiService.delete(API_ENDPOINTS.ME);
+    if (Platform.OS !== 'web') {
+      // отвязать приложение от Google-аккаунта; не было входа через Google — нечего отзывать
+      await GoogleSignin.revokeAccess().catch(() => {});
+    }
+    await apiService.clearTokens();
+    await AsyncStorage.multiRemove(['user_data', CART_TOKEN_KEY]);
+  }
+
   // Logout user
   async logout() {
     try {

@@ -117,3 +117,46 @@ test('редактирование профиля: PATCH /me/ только с и
   expect(sent).toEqual([{ path: '/me/', method: 'PATCH', body: { first_name: 'Андрей', last_name: '' } }]);
   expect(store.getState().auth.user.first_name).toBe('Андрей');
 });
+
+describe('удаление аккаунта', () => {
+  const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+  const authService = require('../src/services/authService').default;
+  let sent;
+  const mockServer = (status) => {
+    sent = [];
+    global.fetch = jest.fn(async (url, options) => {
+      sent.push({ path: url.replace(/^.*\/api\/v1/, ''), method: options.method });
+      return {
+        status, ok: status < 400, statusText: '',
+        headers: { get: () => (status < 400 ? null : 'application/json') },
+        text: async () => '',
+        json: async () => ({ detail: 'Ошибка сервера' }),
+      };
+    });
+  };
+
+  beforeEach(async () => {
+    await apiService.setAuthToken('jwt-a');
+    await apiService.setRefreshToken('jwt-r');
+    await AsyncStorage.setItem('user_data', '{"id":37}');
+    await AsyncStorage.setItem('cart_token', 'old-cart');
+  });
+
+  test('DELETE /me/ → токены, профиль и корзина на телефоне стёрты, доступ Google отозван', async () => {
+    mockServer(204);
+    await authService.deleteAccount();
+    expect(sent).toEqual([{ path: '/me/', method: 'DELETE' }]);
+    expect(GoogleSignin.revokeAccess).toHaveBeenCalled();
+    expect(await apiService.getAuthToken()).toBeNull();
+    expect(await apiService.getRefreshToken()).toBeNull();
+    expect(await AsyncStorage.getItem('user_data')).toBeNull();
+    expect(await AsyncStorage.getItem('cart_token')).toBeNull();
+  });
+
+  test('сервер не удалил — ошибка, вход на телефоне остаётся', async () => {
+    mockServer(500);
+    await expect(authService.deleteAccount()).rejects.toMatchObject({ status: 500 });
+    expect(await apiService.getAuthToken()).toBe('jwt-a');
+    expect(await AsyncStorage.getItem('user_data')).toBe('{"id":37}');
+  });
+});

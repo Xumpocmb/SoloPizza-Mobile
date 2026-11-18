@@ -23,6 +23,7 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
     hasPlayServices: jest.fn(async () => true),
     signIn: jest.fn(async () => ({ type: 'cancelled', data: null })),
     signOut: jest.fn(async () => null),
+    revokeAccess: jest.fn(async () => null),
   },
   isSuccessResponse: (response) => response?.type === 'success',
   isErrorWithCode: (error) => Boolean(error && typeof error === 'object' && 'code' in error),

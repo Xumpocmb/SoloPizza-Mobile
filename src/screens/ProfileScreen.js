@@ -16,6 +16,7 @@ import useAppTheme from '../theme/useAppTheme';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout, updateProfile } from '../store/slices/authSlice';
 import { authService } from '../services';
+import { apiErrorMessage } from '../utils/apiError';
 import { loadCart } from '../store/slices/cartSlice';
 import orderService, { orderStats } from '../services/orderService';
 
@@ -127,6 +128,30 @@ const ProfileScreen = ({ navigation }) => {
       // Force logout even if API call fails
       dispatch(logout());
       navigation.navigate('Home');
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Удалить аккаунт?',
+      'Имя, почта и вход будут удалены навсегда, восстановить их нельзя. ' +
+        'Заказы останутся в истории пиццерии без привязки к вам.',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        { text: 'Удалить', style: 'destructive', onPress: deleteAccount },
+      ]
+    );
+  };
+
+  const deleteAccount = async () => {
+    try {
+      await authService.deleteAccount();
+      dispatch(logout());
+      dispatch(loadCart());
+      navigation.navigate('Home');
+      Alert.alert('Аккаунт удалён', 'Ваши данные удалены.');
+    } catch (error) {
+      Alert.alert('Не удалось удалить аккаунт', apiErrorMessage(error, 'Попробуйте ещё раз.'));
     }
   };
 
@@ -327,6 +352,13 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.logoutSection}>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Text style={styles.logoutButtonText}>Выйти из аккаунта</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.deleteAccountButton}
+            onPress={handleDeleteAccount}
+            accessibilityRole="button"
+          >
+            <Text style={styles.deleteAccountText}>Удалить аккаунт</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -549,6 +581,17 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.buttonText,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // необратимое действие — неброская ссылка под «Выйти», а не вторая большая кнопка
+  deleteAccountButton: {
+    alignSelf: 'center',
+    marginTop: 16,
+    padding: 8,
+  },
+  deleteAccountText: {
+    color: colors.error,
+    fontSize: 14,
+    textDecorationLine: 'underline',
   },
   guestContent: {
     flex: 1,
