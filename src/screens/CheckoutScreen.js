@@ -205,7 +205,8 @@ export default function CheckoutScreen({ navigation }) {
             {quote.lines.map((line) => (
               <View key={line.id} style={styles.row}>
                 <Text style={styles.rowName} numberOfLines={1}>{`${line.name} × ${line.quantity}`}</Text>
-                <Text style={styles.rowValue}>{money(line.total)}</Text>
+                {/* без скидки: ниже отдельная строка «Скидка», иначе она вычиталась бы дважды на глаз */}
+                <Text style={styles.rowValue}>{money(line.original_total)}</Text>
               </View>
             ))}
             {num(quote.discount_amount) > 0 && (

@@ -73,6 +73,9 @@ export default function OrderDetailScreen({ route, navigation }) {
     );
   }
 
+  // shortcut: original_total отдаёт сервер после выкладки b18af0c; до неё — справка «в том числе», потом ветку можно убрать
+  const withOriginal = order.items.every((line) => line.original_total != null);
+
   return (
     <ScrollView
       style={styles.container}
@@ -110,15 +113,21 @@ export default function OrderDetailScreen({ route, navigation }) {
               <Text style={styles.text}>{`${line.name} × ${line.quantity}`}</Text>
               {!!line.options && <Text style={styles.muted}>{line.options}</Text>}
             </View>
-            <Text style={styles.text}>{money(line.total)}</Text>
+            <Text style={styles.text}>{money(withOriginal ? line.original_total : line.total)}</Text>
           </View>
         ))}
-        {num(order.discount_amount) > 0 && (
+        {/* строки без скидки → скидка вычитается; старый сервер (без original_total) — только справка */}
+        {num(order.discount_amount) > 0 && (withOriginal ? (
           <View style={styles.row}>
             <Text style={styles.text}>Скидка</Text>
             <Text style={[styles.text, styles.discount]}>−{money(order.discount_amount)}</Text>
           </View>
-        )}
+        ) : (
+          <View style={styles.row}>
+            <Text style={styles.muted}>В том числе скидка</Text>
+            <Text style={[styles.muted, styles.discount]}>{money(order.discount_amount)}</Text>
+          </View>
+        ))}
         {order.delivery_type === 'delivery' && (
           <View style={styles.row}>
             <Text style={styles.text}>Доставка</Text>

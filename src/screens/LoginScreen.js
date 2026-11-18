@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,17 @@ import {
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import Alert from '../utils/alertShim';
 import useAppTheme from '../theme/useAppTheme';
 import { authService } from '../services';
 import { loadStoredTokens } from '../store/slices/authSlice';
 import { loadCart } from '../store/slices/cartSlice';
 import { apiErrorMessage } from '../utils/apiError';
+import { GOOGLE_IOS_CLIENT_ID } from '../config/api';
 
-// У библиотеки Google Sign-In нет реализации для веба; веб у нас только превью разработки
-const GOOGLE_AVAILABLE = Platform.OS !== 'web';
+// Google: на вебе у библиотеки нет реализации (веб — только превью), на iPhone нужен iOS-клиент
+const GOOGLE_AVAILABLE = Platform.OS === 'android' || (Platform.OS === 'ios' && !!GOOGLE_IOS_CLIENT_ID);
 
 const googleErrorMessage = (error) => {
   if (isErrorWithCode(error) && error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
@@ -30,11 +32,17 @@ const googleErrorMessage = (error) => {
 };
 
 const LoginScreen = ({ navigation }) => {
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [devToken, setDevToken] = useState('');
+  const [appleAvailable, setAppleAvailable] = useState(false);
+
+  useEffect(() => {
+    // Sign in with Apple есть только на iPhone (iOS 13+); на Android и вебе — false
+    AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => setAppleAvailable(false));
+  }, []);
 
   const finishLogin = async () => {
     await dispatch(loadStoredTokens());
@@ -50,6 +58,21 @@ const LoginScreen = ({ navigation }) => {
     } catch (error) {
       if (isErrorWithCode(error) && error.code === statusCodes.IN_PROGRESS) return;
       Alert.alert('Не удалось войти через Google', googleErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setLoading(true);
+    try {
+      const user = await authService.loginWithApple();
+      if (user) await finishLogin(); // null — закрыл окно Apple
+    } catch (error) {
+      Alert.alert(
+        'Не удалось войти через Apple',
+        error?.status === 503 ? 'Вход через Apple временно недоступен. Попробуйте позже.' : apiErrorMessage(error, 'Попробуйте ещё раз.'),
+      );
     } finally {
       setLoading(false);
     }
@@ -73,6 +96,21 @@ const LoginScreen = ({ navigation }) => {
       <Text style={styles.title}>Вход</Text>
       <Text style={styles.subtitle}>Войдите, чтобы оформить заказ и видеть историю заказов</Text>
 
+      {appleAvailable && (
+        <AppleAuthentication.AppleAuthenticationButton
+          buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+          buttonStyle={
+            isDark
+              ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+              : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+          }
+          cornerRadius={14}
+          style={styles.appleButton}
+          onPress={loading ? () => {} : handleAppleLogin}
+        />
+      )}
+
+      {(GOOGLE_AVAILABLE || Platform.OS === 'web') && (
       <TouchableOpacity
         style={[styles.googleButton, (!GOOGLE_AVAILABLE || loading) && styles.disabled]}
         onPress={handleGoogleLogin}
@@ -88,7 +126,8 @@ const LoginScreen = ({ navigation }) => {
           </>
         )}
       </TouchableOpacity>
-      {!GOOGLE_AVAILABLE && (
+      )}
+      {Platform.OS === 'web' && (
         <Text style={styles.note}>Вход через Google работает в приложении на телефоне.</Text>
       )}
 
@@ -142,6 +181,10 @@ const makeStyles = (colors) =>
       textAlign: 'center',
       lineHeight: 21,
       marginBottom: 28,
+    },
+    appleButton: {
+      height: 48,
+      marginBottom: 12,
     },
     // светлая кнопка в стиле Google: белый фон, тёмный текст, тонкая рамка
     googleButton: {

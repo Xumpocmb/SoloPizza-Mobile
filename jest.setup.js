@@ -23,8 +23,19 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
     hasPlayServices: jest.fn(async () => true),
     signIn: jest.fn(async () => ({ type: 'cancelled', data: null })),
     signOut: jest.fn(async () => null),
+    revokeAccess: jest.fn(async () => null),
   },
   isSuccessResponse: (response) => response?.type === 'success',
   isErrorWithCode: (error) => Boolean(error && typeof error === 'object' && 'code' in error),
   statusCodes: { IN_PROGRESS: 'IN_PROGRESS', PLAY_SERVICES_NOT_AVAILABLE: 'PLAY_SERVICES_NOT_AVAILABLE' },
+}));
+
+// Sign in with Apple — нативный модуль iOS; в тестах — заглушка.
+jest.mock('expo-apple-authentication', () => ({
+  isAvailableAsync: jest.fn(async () => false),
+  signInAsync: jest.fn(),
+  AppleAuthenticationScope: { FULL_NAME: 0, EMAIL: 1 },
+  AppleAuthenticationButtonType: { SIGN_IN: 0 },
+  AppleAuthenticationButtonStyle: { WHITE: 0, BLACK: 2 },
+  AppleAuthenticationButton: () => null,
 }));
