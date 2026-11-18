@@ -108,11 +108,9 @@ describe('дефект №3: промо не стучится в несущес�
   });
 });
 
-describe('дефект №14: профиль гостя не стучится в /user/stats/', () => {
-  test('USER_API_ENABLED=false и нет токена → запросов нет, экран получает нули', async () => {
+describe('дефект №14: профиль не стучится в несуществующие /user/*', () => {
+  test('USER_API_ENABLED=false и нет токена → запросов нет', async () => {
     expect(USER_API_ENABLED).toBe(false);
-    const stats = await userService.getStats();
-    expect(stats).toEqual({ orders_count: 0, total_spent: 0, bonus_points: 0 });
     const addresses = await userService.getAddresses();
     expect(addresses).toEqual([]);
     expect(apiService.get).not.toHaveBeenCalled();
@@ -120,7 +118,6 @@ describe('дефект №14: профиль гостя не стучится в
 
   test('флаг выключен даже при наличии токена → запросов нет', async () => {
     apiService.getAuthToken.mockResolvedValue('access-token');
-    await userService.getStats();
     await userService.getAddresses();
     expect(apiService.get).not.toHaveBeenCalled();
   });

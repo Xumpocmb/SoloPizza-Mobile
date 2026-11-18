@@ -128,7 +128,6 @@ export const API_ENDPOINTS = {
   USER: {
     PROFILE: '/auth/profile/',
     ADDRESSES: '/user/addresses/',
-    STATS: '/user/stats/',
   },
 };
 
