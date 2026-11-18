@@ -18,7 +18,7 @@ import DemoBanner from '../components/ui/DemoBanner';
 import BranchPicker from '../components/BranchPicker';
 import useAppTheme from '../theme/useAppTheme';
 
-const CatalogScreen = ({ navigation }) => {
+const CatalogScreen = ({ navigation, route }) => {
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
@@ -161,6 +161,14 @@ const CatalogScreen = ({ navigation }) => {
   useEffect(() => {
     loadData(true);
   }, [selectedCategory]);
+
+  // категория с главной: выбрать её и сбросить параметр, чтобы повторный переход тоже срабатывал
+  const requestedCategoryId = route?.params?.categoryId;
+  useEffect(() => {
+    if (requestedCategoryId == null) return;
+    setSelectedCategory({ id: requestedCategoryId });
+    navigation.setParams({ categoryId: undefined });
+  }, [requestedCategoryId]);
 
   if (loading && !refreshing) {
     return (

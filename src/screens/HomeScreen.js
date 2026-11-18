@@ -131,7 +131,8 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const navigateToCategory = (category) => {
-    navigation.navigate('Catalog', { categoryId: category.id });
+    // параметры — экрану каталога внутри вкладки, а не самой вкладке
+    navigation.navigate('Catalog', { screen: 'CatalogMain', params: { categoryId: category.id } });
   };
 
   const navigateToAllProducts = () => {
