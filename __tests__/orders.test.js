@@ -71,16 +71,6 @@ test('опрос статуса останавливается на заверш
   expect(FINAL_STATUSES).toEqual(['completed', 'canceled']);
 });
 
-test('статистика профиля: отменённые заказы не считаются, сумма в BYN по total_price', () => {
-  const { orderStats } = require('../src/services/orderService');
-  expect(orderStats([
-    { status: 'completed', total_price: '23.85' },
-    { status: 'new', total_price: '12.50' },
-    { status: 'canceled', total_price: '99.00' },
-  ])).toEqual({ count: 2, spent: 36.35 });
-  expect(orderStats([])).toEqual({ count: 0, spent: 0 });
-});
-
 test('отзыв уходит на POST /reviews/ с оценкой и текстом без лишних пробелов', async () => {
   const reviewService = require('../src/services/reviewService').default;
   const sent = [];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  RefreshControl,
   Platform,
 } from 'react-native';
 import Alert from '../utils/alertShim';
@@ -18,7 +17,6 @@ import { logout, updateProfile } from '../store/slices/authSlice';
 import { authService } from '../services';
 import { apiErrorMessage } from '../utils/apiError';
 import { loadCart } from '../store/slices/cartSlice';
-import orderService, { orderStats } from '../services/orderService';
 
 const ProfileScreen = ({ navigation }) => {
   const { colors } = useAppTheme();
@@ -26,31 +24,8 @@ const ProfileScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { user, isLoading } = useSelector((state) => state.auth);
   const [isEditing, setIsEditing] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [stats, setStats] = useState(null);
   const [formData, setFormData] = useState({ first_name: '', last_name: '' });
   const [errors, setErrors] = useState({});
-
-  // Статистики на сервере нет — считаем по своим заказам; не загрузилось — блока нет
-  const loadStats = async () => {
-    if (!user) return;
-    try {
-      setLoading(true);
-      const orders = await orderService.getOrders();
-      setStats(orderStats(Array.isArray(orders) ? orders : []));
-    } catch (error) {
-      setStats(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadStats();
-    setRefreshing(false);
-  };
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -173,10 +148,6 @@ const ProfileScreen = ({ navigation }) => {
     },
   ];
 
-  useEffect(() => {
-    loadStats();
-  }, [user?.id]);
-
   if (!user) {
     return (
       <View style={styles.guestContainer}>
@@ -209,13 +180,6 @@ const ProfileScreen = ({ navigation }) => {
     <ScrollView 
       style={styles.container} 
       showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={[colors.accent]}
-        />
-      }
     >
       {/* Заголовок */}
       <View style={styles.header}>
@@ -310,23 +274,6 @@ const ProfileScreen = ({ navigation }) => {
           </View>
         )}
       </View>
-
-      {/* Statistics */}
-      {!isEditing && stats && (
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Статистика</Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.count}</Text>
-              <Text style={styles.statLabel}>Заказов</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.spent.toFixed(2)} BYN</Text>
-              <Text style={styles.statLabel}>Потрачено</Text>
-            </View>
-          </View>
-        </View>
-      )}
 
       {/* Меню */}
       {!isEditing && (
@@ -645,46 +592,6 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.accent,
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  statsSection: {
-    backgroundColor: colors.cardBg,
-    marginTop: 10,
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 15,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 15,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.accent,
-    marginBottom: 5,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-  joinDateContainer: {
-    alignItems: 'center',
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: colors.hoverBg,
-  },
-  joinDateText: {
-    fontSize: 14,
-    color: colors.textMuted,
   },
 });
 
