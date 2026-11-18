@@ -1,8 +1,9 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin, isSuccessResponse } from '@react-native-google-signin/google-signin';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import apiService from './apiService';
-import { API_ENDPOINTS, GOOGLE_WEB_CLIENT_ID } from '../config/api';
+import { API_ENDPOINTS, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '../config/api';
 
 const CART_TOKEN_KEY = 'cart_token'; // то же, что в cartService
 
@@ -14,15 +15,47 @@ class AuthService {
    * Только Android/iOS: на вебе у библиотеки нет реализации.
    */
   async loginWithGoogle() {
-    GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+    GoogleSignin.configure({
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+      ...(GOOGLE_IOS_CLIENT_ID ? { iosClientId: GOOGLE_IOS_CLIENT_ID } : {}),
+    });
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     const result = await GoogleSignin.signIn();
     if (!isSuccessResponse(result)) return null;
+    return this.socialLogin(API_ENDPOINTS.AUTH.GOOGLE, { id_token: result.data.idToken });
+  }
 
+  /**
+   * Вход через Apple (только iPhone). Сервер проверяет identity_token по bundle id.
+   * Имя Apple отдаёт только при самом первом входе — передаём его серверу сразу.
+   * null — пользователь закрыл окно Apple.
+   */
+  async loginWithApple() {
+    let credential;
+    try {
+      credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+    } catch (error) {
+      if (error?.code === 'ERR_REQUEST_CANCELED') return null;
+      throw error;
+    }
+    return this.socialLogin(API_ENDPOINTS.AUTH.APPLE, {
+      identity_token: credential.identityToken,
+      first_name: credential.fullName?.givenName || '',
+      last_name: credential.fullName?.familyName || '',
+    });
+  }
+
+  /** Токен провайдера → наш сервер (с гостевой корзиной) → JWT и пользователь в хранилище. */
+  async socialLogin(endpoint, body) {
     const cartToken = await AsyncStorage.getItem(CART_TOKEN_KEY);
-    const response = await apiService.makeRequest(API_ENDPOINTS.AUTH.GOOGLE, {
+    const response = await apiService.makeRequest(endpoint, {
       method: 'POST',
-      body: JSON.stringify({ id_token: result.data.idToken }),
+      body: JSON.stringify(body),
       headers: cartToken ? { 'X-Cart-Token': cartToken } : {},
     });
     await this.storeTokens(response.access, response.refresh);

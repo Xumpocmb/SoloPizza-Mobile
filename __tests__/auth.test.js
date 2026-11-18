@@ -160,3 +160,47 @@ describe('удаление аккаунта', () => {
     expect(await AsyncStorage.getItem('user_data')).toBe('{"id":37}');
   });
 });
+
+describe('вход через Apple', () => {
+  const AppleAuthentication = require('expo-apple-authentication');
+  const authService = require('../src/services/authService').default;
+  let calls;
+
+  beforeEach(async () => {
+    calls = [];
+    await apiService.clearTokens();
+    global.fetch = jest.fn(async (url, options) => {
+      calls.push({ path: url.replace(/^.*\/api\/v1/, ''), headers: options.headers, body: JSON.parse(options.body) });
+      return {
+        status: 200, ok: true, statusText: '',
+        headers: { get: () => 'application/json' },
+        json: async () => ({ access: 'jwt-a', refresh: 'jwt-r', user: { id: 5, first_name: 'Анна' } }),
+      };
+    });
+  });
+
+  test('identity_token и имя (Apple даёт его только при первом входе) уходят на /auth/apple/ с гостевой корзиной', async () => {
+    await AsyncStorage.setItem('cart_token', 'guest-cart');
+    AppleAuthentication.signInAsync.mockResolvedValue({
+      identityToken: 'apple-token',
+      fullName: { givenName: 'Анна', familyName: 'Петрова' },
+    });
+
+    const user = await authService.loginWithApple();
+
+    expect(calls).toEqual([{
+      path: '/auth/apple/',
+      headers: expect.objectContaining({ 'X-Cart-Token': 'guest-cart' }),
+      body: { identity_token: 'apple-token', first_name: 'Анна', last_name: 'Петрова' },
+    }]);
+    expect(user).toEqual({ id: 5, first_name: 'Анна' });
+    expect(await apiService.getAuthToken()).toBe('jwt-a');
+    expect(await AsyncStorage.getItem('cart_token')).toBeNull();
+  });
+
+  test('закрыл окно Apple — null, на сервер ничего не уходит', async () => {
+    AppleAuthentication.signInAsync.mockRejectedValue(Object.assign(new Error('canceled'), { code: 'ERR_REQUEST_CANCELED' }));
+    expect(await authService.loginWithApple()).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+});
