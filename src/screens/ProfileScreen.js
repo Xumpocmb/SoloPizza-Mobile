@@ -8,6 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
+  Linking,
 } from 'react-native';
 import Alert from '../utils/alertShim';
 import Icon from '../components/ui/Icon';
@@ -142,7 +143,11 @@ const ProfileScreen = ({ navigation }) => {
       onPress: () => {
         Alert.alert(
           'О приложении',
-          'SoloPizza Mobile App\nВерсия: 1.0.0\n\n© 2024 SoloPizza. Все права защищены.'
+          `Solo Pizza\nВерсия: 1.0.0\nСайт: solo-pizza.by\n\n© ${new Date().getFullYear()} Solo Pizza. Все права защищены.`,
+          [
+            { text: 'Открыть сайт', onPress: () => Linking.openURL('https://solo-pizza.by') },
+            { text: 'OK', style: 'cancel' },
+          ]
         );
       },
     },
