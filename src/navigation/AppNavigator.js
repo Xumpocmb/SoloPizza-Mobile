@@ -34,6 +34,7 @@ import VacancyListScreen from '../screens/VacancyListScreen';
 import VacancyDetailScreen from '../screens/VacancyDetailScreen';
 import VacancyApplyScreen from '../screens/VacancyApplyScreen';
 import ContactsScreen from '../screens/ContactsScreen';
+import ReviewsScreen from '../screens/ReviewsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -79,6 +80,7 @@ const sharedScreens = (
     <Stack.Screen name="VacancyDetail" component={VacancyDetailScreen} options={{ title: 'Вакансия' }} />
     <Stack.Screen name="VacancyApply" component={VacancyApplyScreen} options={{ title: 'Отклик на вакансию' }} />
     <Stack.Screen name="Contacts" component={ContactsScreen} options={{ title: 'Контакты' }} />
+    <Stack.Screen name="Reviews" component={ReviewsScreen} options={{ title: 'Отзывы' }} />
   </>
 );
 
