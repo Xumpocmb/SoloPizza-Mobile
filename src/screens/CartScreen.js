@@ -331,10 +331,12 @@ const CartScreen = ({ navigation }) => {
               <Text style={styles.summaryLabel}>Товаров:</Text>
               <Text style={styles.summaryValue}>{totalItems} шт.</Text>
             </View>
-            <View style={[styles.summaryRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>Итого к оплате:</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.totalLabel}>Сумма заказа:</Text>
               <Text style={styles.totalValue}>{totalAmount.toFixed(2)} BYN</Text>
             </View>
+            {/* цены здесь без скидок: способ получения выбирают при оформлении, там сервер и считает скидку */}
+            <Text style={styles.discountHint}>Скидка на пиццу при самовывозе — при оформлении</Text>
             <TouchableOpacity
               style={styles.checkoutButton}
               onPress={handleCheckout}
@@ -502,7 +504,9 @@ const makeStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 2,
   },
-  totalRow: {
+  discountHint: {
+    fontSize: 12,
+    color: colors.textMuted,
     marginBottom: 10,
   },
   summaryLabel: {
