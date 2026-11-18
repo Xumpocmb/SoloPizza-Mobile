@@ -184,10 +184,13 @@ const CatalogScreen = ({ navigation, route }) => {
   }, [selectedCategory]);
 
   // категория с главной: выбрать её и сбросить параметр, чтобы повторный переход тоже срабатывал
+  // 'all' — начальный вид каталога (кнопка в пустой корзине): «Все» и список с начала
+  const productsRef = useRef(null);
   const requestedCategoryId = route?.params?.categoryId;
   useEffect(() => {
     if (requestedCategoryId == null) return;
-    setSelectedCategory({ id: requestedCategoryId });
+    setSelectedCategory(requestedCategoryId === 'all' ? null : { id: requestedCategoryId });
+    productsRef.current?.scrollToOffset({ offset: 0, animated: false });
     navigation.setParams({ categoryId: undefined });
   }, [requestedCategoryId]);
 
@@ -236,6 +239,7 @@ const CatalogScreen = ({ navigation, route }) => {
 
       {/* Список товаров */}
       <FlatList
+        ref={productsRef}
         data={filteredProducts}
         renderItem={renderProduct}
         keyExtractor={(item) => item.id.toString()}

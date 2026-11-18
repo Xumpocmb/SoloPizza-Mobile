@@ -287,9 +287,10 @@ const CartScreen = ({ navigation }) => {
       </Text>
       <TouchableOpacity
         style={styles.continueButton}
-        onPress={() => navigation.navigate('Catalog')}
+        // каталог в начальном виде: фильтр «Все», список с начала
+        onPress={() => navigation.navigate('Catalog', { screen: 'CatalogMain', params: { categoryId: 'all' } })}
       >
-        <Text style={styles.continueButtonText}>Перейти к покупкам</Text>
+        <Text style={styles.continueButtonText}>Вернуться в каталог</Text>
       </TouchableOpacity>
     </View>
   );
