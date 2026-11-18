@@ -153,7 +153,11 @@ class ApiService {
         }, timeoutMs);
       });
       return Promise.race([
-        fetch(url, { ...opts, signal: controller.signal }),
+        // fetch отклоняется только без ответа сервера (нет сети, DNS, обрыв). Текст ошибки платформы
+        // («fetch failed: java.net.UnknownHostException…») пользователю непонятен — заменяем своим
+        fetch(url, { ...opts, signal: controller.signal }).catch((cause) => {
+          throw { status: 0, message: NO_INTERNET_MESSAGE, isNetworkError: true, cause };
+        }),
         timeoutPromise,
       ]).finally(() => clearTimeout(timer));
     };
@@ -216,19 +220,10 @@ class ApiService {
 
   // Handle errors
   handleError(error) {
-    // fetch падает TypeError'ом без ответа сервера: на телефоне «Network request failed», в браузере «Failed to fetch»
-    if (error?.name === 'TypeError') {
+    if (error?.message === 'Request timeout') {
       return {
         status: 0,
-        message: NO_INTERNET_MESSAGE,
-        isNetworkError: true,
-      };
-    }
-    
-    if (error.message === 'Request timeout') {
-      return {
-        status: 0,
-        message: 'Превышено время ожидания запроса',
+        message: 'Сервер не отвечает. Проверьте интернет и попробуйте снова.',
         isTimeoutError: true,
       };
     }

@@ -71,3 +71,15 @@ test('таймаут отменяет fetch через AbortController и отд
   await new Promise((resolve) => setTimeout(resolve, 10));
   expect(aborted).toBe(true);
 });
+
+test('обрыв сети: вместо текста ошибки платформы — «Нет подключения к интернету»', async () => {
+  const apiService = require('../src/services/apiService').default;
+  global.fetch = jest.fn(() =>
+    Promise.reject(new Error('fetch failed: java.net.UnknownHostException: Unable to resolve host "solo-pizza.by"')),
+  );
+  await expect(apiService.get('/meta/', {}, { silent: true })).rejects.toMatchObject({
+    status: 0,
+    message: 'Нет подключения к интернету',
+    isNetworkError: true,
+  });
+});
