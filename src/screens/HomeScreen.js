@@ -175,7 +175,7 @@ const HomeScreen = ({ navigation }) => {
             style={styles.addButton}
             onPress={() => handleAddToCart(item)}
           >
-            <Icon name="add-shopping-cart" size={17} color={colors.buttonText} />
+            <Icon name="add-shopping-cart" size={14} color={colors.buttonText} />
           </TouchableOpacity>
         </View>
       </View>

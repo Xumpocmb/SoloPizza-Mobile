@@ -151,7 +151,7 @@ const CatalogScreen = ({ navigation, route }) => {
             style={styles.addButton}
             onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
           >
-            <Icon name="add-shopping-cart" size={17} color={colors.buttonText} />
+            <Icon name="add-shopping-cart" size={14} color={colors.buttonText} />
           </TouchableOpacity>
         </View>
       </View>
