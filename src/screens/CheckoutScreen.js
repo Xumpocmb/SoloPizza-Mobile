@@ -273,7 +273,7 @@ export default function CheckoutScreen({ navigation }) {
 const makeStyles = (colors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg },
-    content: { padding: 16, paddingBottom: 40 },
+    content: { padding: 16 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24, backgroundColor: colors.bg },
     title: { fontSize: 18, fontWeight: '700', color: colors.text, textAlign: 'center' },
     muted: { fontSize: 14, color: colors.textMuted, textAlign: 'center' },
