@@ -34,7 +34,9 @@ const LoginScreen = ({ navigation }) => {
   const { colors, isDark } = useAppTheme();
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
-  const [loading, setLoading] = useState(false);
+  // какой вход идёт: 'google' | 'apple' | null — спиннер только на нажатой кнопке
+  const [pending, setPending] = useState(null);
+  const loading = pending !== null;
   const [appleAvailable, setAppleAvailable] = useState(false);
 
   useEffect(() => {
@@ -49,7 +51,7 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleGoogleLogin = async () => {
-    setLoading(true);
+    setPending('google');
     try {
       const user = await authService.loginWithGoogle();
       if (user) await finishLogin(); // null — закрыл выбор аккаунта, ничего не делаем
@@ -57,12 +59,12 @@ const LoginScreen = ({ navigation }) => {
       if (isErrorWithCode(error) && error.code === statusCodes.IN_PROGRESS) return;
       Alert.alert('Не удалось войти через Google', googleErrorMessage(error));
     } finally {
-      setLoading(false);
+      setPending(null);
     }
   };
 
   const handleAppleLogin = async () => {
-    setLoading(true);
+    setPending('apple');
     try {
       const user = await authService.loginWithApple();
       if (user) await finishLogin(); // null — закрыл окно Apple
@@ -72,7 +74,7 @@ const LoginScreen = ({ navigation }) => {
         error?.status === 503 ? 'Вход через Apple временно недоступен. Попробуйте позже.' : apiErrorMessage(error, 'Попробуйте ещё раз.'),
       );
     } finally {
-      setLoading(false);
+      setPending(null);
     }
   };
 
@@ -102,7 +104,7 @@ const LoginScreen = ({ navigation }) => {
         disabled={!GOOGLE_AVAILABLE || loading}
         accessibilityRole="button"
       >
-        {loading ? (
+        {pending === 'google' ? (
           <ActivityIndicator size="small" color="#1f1f1f" />
         ) : (
           <>
