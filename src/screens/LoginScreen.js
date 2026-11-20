@@ -153,27 +153,28 @@ const makeStyles = (colors) =>
       height: 48,
       marginBottom: 12,
     },
-    // светлая кнопка в стиле Google: белый фон, тёмный текст, тонкая рамка
+    // светлая кнопка в стиле Google; высота, скругление и шрифт как у системной кнопки Apple
+    // (у Apple текст ≈ 43% высоты кнопки: 48 → 20)
     googleButton: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 10,
-      minHeight: 48,
+      gap: 8,
+      height: 48,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: '#dadce0',
       backgroundColor: '#ffffff',
     },
     googleG: {
-      fontSize: 18,
+      fontSize: 20,
       fontWeight: '700',
       color: '#4285f4',
     },
     googleText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: '#1f1f1f',
+      fontSize: 20,
+      fontWeight: '500',
+      color: '#000000',
     },
     disabled: {
       opacity: 0.5,
