@@ -40,12 +40,12 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 // Компонент иконки корзины с бейджем
-function CartIcon({ color, size }) {
+function CartIcon({ size }) {
   const itemCount = useSelector((state) => state.cart.itemsCount); // сумма количеств, считает сервер
 
   return (
     <View style={styles.cartIconContainer}>
-      <Text style={{ color, fontSize: size }}>🛒</Text>
+      <Image source={require('../../assets/tab/basket.png')} style={{ width: size, height: size }} />
       {itemCount > 0 && (
         <View style={styles.badge} accessibilityLabel={`В корзине ${itemCount} шт.`}>
           <Text style={styles.badgeText}>{itemCount > 99 ? '99+' : itemCount}</Text>
@@ -126,7 +126,9 @@ export default function AppNavigator() {
           options={{
             tabBarLabel: 'Главная',
             tabBarIcon: ({ size }) => (
-              <Image source={require('../../assets/logo-tab.png')} style={[styles.logoIcon, { width: size, height: size }]} />
+              <View style={[styles.soloIcon, { width: size, height: size }]}>
+                <Text style={styles.soloText}>SOLO</Text>
+              </View>
             ),
           }}
         />
@@ -143,7 +145,7 @@ export default function AppNavigator() {
           component={CartStack}
           options={{
             tabBarLabel: 'Корзина',
-            tabBarIcon: ({ color, size }) => <CartIcon color={color} size={size} />,
+            tabBarIcon: ({ size }) => <CartIcon size={size} />,
           }}
         />
         <Tab.Screen
@@ -151,7 +153,7 @@ export default function AppNavigator() {
           component={ProfileStack}
           options={{
             tabBarLabel: 'Профиль',
-            tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>👤</Text>,
+            tabBarIcon: ({ size }) => <Image source={require('../../assets/tab/profile.png')} style={{ width: size, height: size }} />,
           }}
         />
       </Tab.Navigator>
@@ -160,8 +162,17 @@ export default function AppNavigator() {
 }
 
 const styles = StyleSheet.create({
-  logoIcon: {
+  // значок «Главной»: белый квадрат с надписью SOLO
+  soloIcon: {
     borderRadius: 6,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  soloText: {
+    color: '#111111',
+    fontSize: 8,
+    fontWeight: '800',
   },
   cartIconContainer: {
     position: 'relative',
