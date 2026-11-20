@@ -132,7 +132,7 @@ const CatalogScreen = ({ navigation, route }) => {
       style={styles.productCard}
       onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
     >
-      <ProductImage uri={item.image || item.main_image || item.images?.[0]?.image} style={styles.productImage} />
+      <ProductImage uri={item.image || item.main_image || item.images?.[0]?.image} style={styles.productImage} resizeMode="contain" />
       {(item.is_popular || item.isPopular) && (
         <View style={styles.popularBadge}>
           <Text style={styles.popularText}>Популярное</Text>

@@ -160,6 +160,7 @@ const HomeScreen = ({ navigation }) => {
       <ProductImage 
         uri={item.image || item.main_image || item.images?.[0]?.image} 
         style={styles.productImage}
+        resizeMode="contain"
       />
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
