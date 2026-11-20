@@ -143,7 +143,7 @@ const ProfileScreen = ({ navigation }) => {
       onPress: () => {
         Alert.alert(
           'О приложении',
-          `Solo Pizza\nВерсия: 1.0.0\nСайт: solo-pizza.by\n\n© ${new Date().getFullYear()} Solo Pizza. Все права защищены.`,
+          `Solo Pizza\nВерсия: 1.0.0\nСайт: solo-pizza.by\n\n© ${new Date().getFullYear()} Solo Pizza. Все права защищены.\n\nИконки: Twemoji (CC-BY 4.0), Microsoft Fluent Emoji (MIT).`,
           [
             { text: 'Открыть сайт', onPress: () => Linking.openURL('https://solo-pizza.by') },
             { text: 'OK', style: 'cancel' },
