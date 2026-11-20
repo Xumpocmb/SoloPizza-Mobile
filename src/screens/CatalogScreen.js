@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { num } from '../utils/money';
 import ProductImage from '../components/ui/ProductImage';
+import Icon from '../components/ui/Icon';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, fetchCategories } from '../store/slices/productSlice';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -150,7 +151,7 @@ const CatalogScreen = ({ navigation, route }) => {
             style={styles.addButton}
             onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
           >
-            <Text style={styles.addButtonText}>+</Text>
+            <Icon name="add-shopping-cart" size={17} color={colors.buttonText} />
           </TouchableOpacity>
         </View>
       </View>
@@ -346,6 +347,7 @@ const makeStyles = (colors) => StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: '600',
+    textAlign: 'center',
     color: colors.text,
     marginBottom: 4,
   },
@@ -372,11 +374,6 @@ const makeStyles = (colors) => StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  addButtonText: {
-    color: colors.buttonText,
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   emptyContainer: {
     flex: 1,

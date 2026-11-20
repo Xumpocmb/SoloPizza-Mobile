@@ -175,7 +175,7 @@ const HomeScreen = ({ navigation }) => {
             style={styles.addButton}
             onPress={() => handleAddToCart(item)}
           >
-            <Text style={styles.addButtonText}>+</Text>
+            <Icon name="add-shopping-cart" size={17} color={colors.buttonText} />
           </TouchableOpacity>
         </View>
       </View>
@@ -607,6 +607,7 @@ const makeStyles = (colors) => StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
     color: colors.text,
     marginBottom: 4,
   },
@@ -644,11 +645,6 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginTop: 4,
-  },
-  addButtonText: {
-    color: colors.buttonText,
-    fontSize: 18,
-    fontWeight: 'bold',
   },
 });
 
