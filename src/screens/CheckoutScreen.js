@@ -326,7 +326,7 @@ const makeStyles = (colors) =>
     },
     checkboxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
     checkmark: { color: colors.buttonText, fontWeight: '700' },
-    consentText: { flex: 1, fontSize: 14, color: colors.text },
+    consentText: { flex: 1, fontSize: 14, color: colors.text, textAlign: 'justify' },
     link: { color: colors.accent, textDecorationLine: 'underline' },
     note: { marginTop: 16, fontSize: 13, lineHeight: 18, fontWeight: '600', color: colors.error, textAlign: 'center' },
     submit: { marginTop: 18, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, alignItems: 'center', backgroundColor: colors.accent },
