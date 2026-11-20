@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Platform,
@@ -36,7 +35,6 @@ const LoginScreen = ({ navigation }) => {
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
-  const [devToken, setDevToken] = useState('');
   const [appleAvailable, setAppleAvailable] = useState(false);
 
   useEffect(() => {
@@ -73,19 +71,6 @@ const LoginScreen = ({ navigation }) => {
         'Не удалось войти через Apple',
         error?.status === 503 ? 'Вход через Apple временно недоступен. Попробуйте позже.' : apiErrorMessage(error, 'Попробуйте ещё раз.'),
       );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDevTokenLogin = async () => {
-    setLoading(true);
-    try {
-      await authService.loginWithRefreshToken(devToken.trim());
-      setDevToken('');
-      await finishLogin();
-    } catch (error) {
-      Alert.alert('Не удалось войти по токену', error?.message || 'Токен недействителен или уже использован');
     } finally {
       setLoading(false);
     }
@@ -135,26 +120,6 @@ const LoginScreen = ({ navigation }) => {
         <Text style={styles.guestButtonText}>Продолжить без входа</Text>
       </TouchableOpacity>
 
-      {/* Только для разработки: вход тестовым refresh-токеном (веб-превью, где нет Google).
-          __DEV__ = false в сборках для магазинов — блока там нет. */}
-      {__DEV__ && (
-        <View style={styles.devSection}>
-          <Text style={styles.devTitle}>Для разработки: вход по токену</Text>
-          <TextInput
-            style={styles.devInput}
-            placeholder="refresh-токен тестового пользователя"
-            placeholderTextColor={colors.textMuted}
-            value={devToken}
-            onChangeText={setDevToken}
-            autoCapitalize="none"
-            autoCorrect={false}
-            secureTextEntry
-          />
-          <TouchableOpacity style={styles.devButton} onPress={handleDevTokenLogin} disabled={loading || !devToken.trim()}>
-            <Text style={styles.devButtonText}>Войти по токену</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </ScrollView>
   );
 };
@@ -227,40 +192,6 @@ const makeStyles = (colors) =>
       color: colors.textMuted,
       fontSize: 14,
       textDecorationLine: 'underline',
-    },
-    devSection: {
-      marginTop: 24,
-      padding: 16,
-      gap: 10,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderStyle: 'dashed',
-      borderColor: colors.textMuted,
-    },
-    devTitle: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
-    devInput: {
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: colors.divider,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      fontSize: 14,
-      color: colors.text,
-      backgroundColor: colors.cardBg,
-    },
-    devButton: {
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderRadius: 10,
-      backgroundColor: colors.textMuted,
-    },
-    devButtonText: {
-      fontWeight: '600',
-      color: colors.buttonText,
     },
   });
 

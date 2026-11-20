@@ -43,7 +43,7 @@ describe('Сервисы', () => {
 
   it('у authService есть методы, которые вызывает LoginScreen', () => {
     const { authService } = require('../src/services');
-    ['loginWithGoogle', 'loginWithRefreshToken', 'logout', 'storeTokens', 'storeUserData']
+    ['loginWithGoogle', 'loginWithApple', 'logout', 'storeTokens', 'storeUserData']
       .forEach(m => expect(typeof authService[m]).toBe('function'));
   });
 
