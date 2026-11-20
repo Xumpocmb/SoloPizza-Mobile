@@ -58,10 +58,7 @@ class UserService {
     }
     try {
       return toArray(await apiService.get(API_ENDPOINTS.USER.ADDRESSES, {}, { silent: true }));
-    } catch (error) {
-      if (__DEV__) {
-        console.warn('[userService] getAddresses недоступен:', error?.message || error);
-      }
+    } catch {
       return [];
     }
   }

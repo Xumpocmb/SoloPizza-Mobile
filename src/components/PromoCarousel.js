@@ -98,7 +98,7 @@ export default function PromoCarousel({ weekly, onOpenProduct, onOpenCatalog }) 
             <Text style={styles.link}>{showWeekly ? 'Выбрать пиццу' : 'Смотреть в меню'} ›</Text>
           ) : null}
         </View>
-        {showWeekly ? <ProductImage uri={weekly.image} style={styles.image} emojiSize={44} /> : null}
+        {showWeekly ? <ProductImage uri={weekly.image} style={styles.image} emojiSize={44} resizeMode="contain" /> : null}
       </TouchableOpacity>
     );
   };

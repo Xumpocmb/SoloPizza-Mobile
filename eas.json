@@ -4,18 +4,25 @@
     "appVersionSource": "remote"
   },
   "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
     "preview": {
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "credentialsSource": "local"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6836297047",
+        "appleTeamId": "5Z7ZV4C96F",
+        "ascApiKeyPath": "./secrets/AuthKey_2BQM4798W8.p8",
+        "ascApiKeyIssuerId": "d5a80ff6-e660-44aa-937c-c1e9b696a02a",
+        "ascApiKeyId": "2BQM4798W8"
+      }
+    }
   }
 }

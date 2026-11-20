@@ -48,12 +48,8 @@ class PromoService {
       // silent: сбой промо не ошибка приложения, красный тост не нужен
       const response = await apiService.get(API_ENDPOINTS.PROMO.ACTIVE, {}, { silent: true });
       return toArray(response);
-    } catch (error) {
-      // Эндпоинта может не быть — это не ошибка приложения, а отсутствие данных.
-      // Логируем тихо, чтобы не засорять консоль на каждом открытии экрана.
-      if (__DEV__) {
-        console.warn('[promoService] getActivePromos недоступен:', error?.message || error);
-      }
+    } catch {
+      // Эндпоинта может не быть — это не ошибка приложения, а отсутствие данных
       return [];
     }
   }

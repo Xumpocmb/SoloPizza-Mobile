@@ -249,6 +249,13 @@ export default function CheckoutScreen({ navigation }) {
         </TouchableOpacity>
         {errors.consent ? <Text style={styles.error}>{errors.consent}</Text> : null}
 
+        <Text style={styles.note}>
+          После оформления заказа с Вами свяжется оператор для подтверждения заказа.{'\n\n'}
+          Если заказ не будет подтвержден, он будет отменен.{'\n\n'}
+          В случае, если с Вами не связались в течение 15ти минут, пожалуйста, перезвоните нам по нашим номерам и
+          сообщите Ваш номер заказа.
+        </Text>
+
         <TouchableOpacity
           style={[styles.submit, (sending || empty || blocked || !quote) && styles.submitDisabled]}
           onPress={submit}
@@ -321,6 +328,7 @@ const makeStyles = (colors) =>
     checkmark: { color: colors.buttonText, fontWeight: '700' },
     consentText: { flex: 1, fontSize: 14, color: colors.text },
     link: { color: colors.accent, textDecorationLine: 'underline' },
+    note: { marginTop: 16, fontSize: 13, lineHeight: 18, color: colors.textMuted },
     submit: { marginTop: 18, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, alignItems: 'center', backgroundColor: colors.accent },
     submitDisabled: { opacity: 0.5 },
     submitText: { fontSize: 16, fontWeight: '700', color: colors.buttonText },

@@ -11,7 +11,9 @@
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDevelopmentRegion": "ru",
+        "CFBundleLocalizations": ["ru"]
       }
     },
     "android": {

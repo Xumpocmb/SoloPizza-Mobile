@@ -224,6 +224,7 @@ const CartScreen = ({ navigation }) => {
             uri={item.image || item.product?.main_image}
             style={styles.itemImage}
             emojiSize={28}
+            resizeMode="contain"
           />
 
           <View style={styles.itemInfo}>

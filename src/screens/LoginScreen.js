@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Platform,
@@ -35,8 +34,9 @@ const LoginScreen = ({ navigation }) => {
   const { colors, isDark } = useAppTheme();
   const styles = makeStyles(colors);
   const dispatch = useDispatch();
-  const [loading, setLoading] = useState(false);
-  const [devToken, setDevToken] = useState('');
+  // какой вход идёт: 'google' | 'apple' | null — спиннер только на нажатой кнопке
+  const [pending, setPending] = useState(null);
+  const loading = pending !== null;
   const [appleAvailable, setAppleAvailable] = useState(false);
 
   useEffect(() => {
@@ -51,7 +51,7 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleGoogleLogin = async () => {
-    setLoading(true);
+    setPending('google');
     try {
       const user = await authService.loginWithGoogle();
       if (user) await finishLogin(); // null — закрыл выбор аккаунта, ничего не делаем
@@ -59,12 +59,12 @@ const LoginScreen = ({ navigation }) => {
       if (isErrorWithCode(error) && error.code === statusCodes.IN_PROGRESS) return;
       Alert.alert('Не удалось войти через Google', googleErrorMessage(error));
     } finally {
-      setLoading(false);
+      setPending(null);
     }
   };
 
   const handleAppleLogin = async () => {
-    setLoading(true);
+    setPending('apple');
     try {
       const user = await authService.loginWithApple();
       if (user) await finishLogin(); // null — закрыл окно Apple
@@ -74,20 +74,7 @@ const LoginScreen = ({ navigation }) => {
         error?.status === 503 ? 'Вход через Apple временно недоступен. Попробуйте позже.' : apiErrorMessage(error, 'Попробуйте ещё раз.'),
       );
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDevTokenLogin = async () => {
-    setLoading(true);
-    try {
-      await authService.loginWithRefreshToken(devToken.trim());
-      setDevToken('');
-      await finishLogin();
-    } catch (error) {
-      Alert.alert('Не удалось войти по токену', error?.message || 'Токен недействителен или уже использован');
-    } finally {
-      setLoading(false);
+      setPending(null);
     }
   };
 
@@ -117,7 +104,7 @@ const LoginScreen = ({ navigation }) => {
         disabled={!GOOGLE_AVAILABLE || loading}
         accessibilityRole="button"
       >
-        {loading ? (
+        {pending === 'google' ? (
           <ActivityIndicator size="small" color="#1f1f1f" />
         ) : (
           <>
@@ -135,26 +122,6 @@ const LoginScreen = ({ navigation }) => {
         <Text style={styles.guestButtonText}>Продолжить без входа</Text>
       </TouchableOpacity>
 
-      {/* Только для разработки: вход тестовым refresh-токеном (веб-превью, где нет Google).
-          __DEV__ = false в сборках для магазинов — блока там нет. */}
-      {__DEV__ && (
-        <View style={styles.devSection}>
-          <Text style={styles.devTitle}>Для разработки: вход по токену</Text>
-          <TextInput
-            style={styles.devInput}
-            placeholder="refresh-токен тестового пользователя"
-            placeholderTextColor={colors.textMuted}
-            value={devToken}
-            onChangeText={setDevToken}
-            autoCapitalize="none"
-            autoCorrect={false}
-            secureTextEntry
-          />
-          <TouchableOpacity style={styles.devButton} onPress={handleDevTokenLogin} disabled={loading || !devToken.trim()}>
-            <Text style={styles.devButtonText}>Войти по токену</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </ScrollView>
   );
 };
@@ -186,27 +153,28 @@ const makeStyles = (colors) =>
       height: 48,
       marginBottom: 12,
     },
-    // светлая кнопка в стиле Google: белый фон, тёмный текст, тонкая рамка
+    // светлая кнопка в стиле Google; высота, скругление и шрифт как у системной кнопки Apple
+    // (у Apple текст ≈ 43% высоты кнопки: 48 → 20)
     googleButton: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 10,
-      minHeight: 48,
+      gap: 8,
+      height: 48,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: '#dadce0',
       backgroundColor: '#ffffff',
     },
     googleG: {
-      fontSize: 18,
+      fontSize: 20,
       fontWeight: '700',
       color: '#4285f4',
     },
     googleText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: '#1f1f1f',
+      fontSize: 20,
+      fontWeight: '500',
+      color: '#000000',
     },
     disabled: {
       opacity: 0.5,
@@ -227,40 +195,6 @@ const makeStyles = (colors) =>
       color: colors.textMuted,
       fontSize: 14,
       textDecorationLine: 'underline',
-    },
-    devSection: {
-      marginTop: 24,
-      padding: 16,
-      gap: 10,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderStyle: 'dashed',
-      borderColor: colors.textMuted,
-    },
-    devTitle: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
-    devInput: {
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: colors.divider,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      fontSize: 14,
-      color: colors.text,
-      backgroundColor: colors.cardBg,
-    },
-    devButton: {
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderRadius: 10,
-      backgroundColor: colors.textMuted,
-    },
-    devButtonText: {
-      fontWeight: '600',
-      color: colors.buttonText,
     },
   });
 
