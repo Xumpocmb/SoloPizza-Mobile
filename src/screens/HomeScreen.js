@@ -223,13 +223,14 @@ const HomeScreen = ({ navigation }) => {
   return (
     // edges top: контент не уходит под строку состояния (Android рисует приложение во весь экран)
     <SafeAreaView style={styles.container} edges={['top']}>
-    <ScrollView 
+    {/* филиал закреплён сверху: при прокрутке остаётся на месте, как в каталоге */}
+    <BranchPicker />
+    <ScrollView
       style={styles.container}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <BranchPicker />
       {announcements.map((item) => (
         <View key={item.id} style={styles.announcement}>
           <Text style={styles.announcementText}>{item.text}</Text>
