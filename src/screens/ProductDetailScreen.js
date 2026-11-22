@@ -117,7 +117,6 @@ const ProductDetailScreen = ({ route, navigation }) => {
         if (!active) return;
         setProduct(data);
         setSelection(initialSelection(data));
-        navigation.setOptions({ title: data.name }); // заголовок — название товара, а не «Товар»
       })
       .catch((error) => {
         if (!active) return;
