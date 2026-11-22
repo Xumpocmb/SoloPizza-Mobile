@@ -494,6 +494,7 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     color: colors.textMuted,
+    textAlign: 'center',
   },
   reviewCard: {
     backgroundColor: colors.cardBg,
