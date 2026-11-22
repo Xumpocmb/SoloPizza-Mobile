@@ -325,7 +325,6 @@ const HomeScreen = ({ navigation }) => {
             keyExtractor={(item) => String(item.id)}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.vacanciesList}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.vacancyCard}
@@ -525,9 +524,6 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.buttonText,
     fontSize: 15,
     fontWeight: '700',
-  },
-  vacanciesList: {
-    paddingHorizontal: 16,
   },
   vacancyCard: {
     width: 200,
