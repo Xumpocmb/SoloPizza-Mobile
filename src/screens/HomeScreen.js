@@ -578,7 +578,7 @@ const makeStyles = (colors) => StyleSheet.create({
     fontWeight: '500',
   },
   productsList: {
-    paddingLeft: 5,
+    paddingVertical: 4, // место под тень карточек сверху и снизу
   },
   productCard: {
     backgroundColor: colors.cardBg,
