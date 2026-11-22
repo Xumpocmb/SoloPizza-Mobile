@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import Alert from '../utils/alertShim';
@@ -204,7 +205,13 @@ const ProductDetailScreen = ({ route, navigation }) => {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <ProductImage uri={product.image} style={styles.productImage} emojiSize={72} resizeMode="contain" />
+        <View style={styles.imageBox}>
+          {/* фон — то же фото, растянутое и размытое: закрывает пустые поля по бокам */}
+          {!!product.image && (
+            <Image source={{ uri: product.image }} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={25} />
+          )}
+          <ProductImage uri={product.image} style={styles.productImage} emojiSize={72} resizeMode="contain" />
+        </View>
 
         <View style={styles.productInfo}>
           <Text style={styles.productName}>{product.name}</Text>
@@ -396,6 +403,9 @@ const makeStyles = (colors) => StyleSheet.create({
    },
   scrollView: {
     flex: 1,
+  },
+  imageBox: {
+    overflow: 'hidden',
   },
   productImage: {
     width: '100%',
