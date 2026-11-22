@@ -105,6 +105,7 @@ const HomeScreen = ({ navigation }) => {
 
   // Instagram и реквизиты компании (как в футере сайта) — из /contacts/
   const [contacts, setContacts] = useState(null);
+  const branchContacts = contacts?.branches?.find((b) => b.id === branchId) ?? null;
   useEffect(() => {
     catalogService.getContacts().then(setContacts).catch(() => setContacts(null));
   }, []);
@@ -352,6 +353,23 @@ const HomeScreen = ({ navigation }) => {
 
       {/* В самом конце — как футер сайта: Instagram, реквизиты, © */}
       <View style={styles.footer}>
+        {/* контакты выбранного вверху филиала; номера — звонок по нажатию */}
+        {!!branchContacts && (
+          <View style={styles.contacts}>
+            <Text style={styles.contactsTitle}>Контакты</Text>
+            {(branchContacts.phones ?? []).map((phone) => (
+              <TouchableOpacity
+                key={phone.dial}
+                onPress={() => Linking.openURL(`tel:${phone.dial}`)}
+                accessibilityRole="link"
+                accessibilityLabel={`Позвонить ${phone.number}`}
+              >
+                <Text style={styles.contactsPhone}>{phone.number}</Text>
+              </TouchableOpacity>
+            ))}
+            {!!branchContacts.address && <Text style={styles.contactsAddress}>{branchContacts.address}</Text>}
+          </View>
+        )}
         {!!contacts?.instagram_url && (
           <TouchableOpacity
             style={styles.instagram}
@@ -471,6 +489,25 @@ const makeStyles = (colors) => StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 24,
     gap: 12,
+  },
+  contacts: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  contactsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.accent,
+    marginBottom: 2,
+  },
+  contactsPhone: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.accent,
+  },
+  contactsAddress: {
+    fontSize: 14,
+    color: colors.text,
   },
   instagram: {
     flexDirection: 'row',
