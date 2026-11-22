@@ -133,7 +133,7 @@ const CatalogScreen = ({ navigation, route }) => {
       style={styles.productCard}
       onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
     >
-      <ProductImage uri={item.image || item.main_image || item.images?.[0]?.image} style={styles.productImage} resizeMode="contain" />
+      <ProductImage uri={item.image || item.main_image || item.images?.[0]?.image} style={styles.productImage} />
       {(item.is_popular || item.isPopular) && (
         <View style={styles.popularBadge}>
           <Text style={styles.popularText}>Популярное</Text>
@@ -335,11 +335,13 @@ const makeStyles = (colors) => StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
+  // фото квадратные (1:1): квадрат со скруглением, чуть ниже верхнего края карточки
   productImage: {
-    width: '100%',
+    width: 120,
     height: 120,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    alignSelf: 'center',
+    marginTop: 10,
+    borderRadius: 14,
   },
   productInfo: {
     padding: 12,
