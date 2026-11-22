@@ -509,15 +509,19 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 14,
     color: colors.text,
   },
+  // по ширине содержимого и по центру, а не во всю строку
   instagram: {
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'center',
+    gap: 8,
     backgroundColor: colors.cardBg,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.divider,
-    padding: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   instagramText: {
     fontSize: 16,
