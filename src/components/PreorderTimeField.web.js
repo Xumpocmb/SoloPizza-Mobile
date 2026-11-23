@@ -11,7 +11,7 @@ const pad = (n) => String(n).padStart(2, '0');
 const toLocalInput = (date) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 
-export default function PreorderTimeField({ label, value, onChange, error, range, disabled }) {
+export default function PreorderTimeField({ label, value, onChange, error, disabled }) {
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
   return (
@@ -22,8 +22,7 @@ export default function PreorderTimeField({ label, value, onChange, error, range
         'aria-label': label,
         disabled,
         value: value ? toLocalInput(new Date(value)) : '',
-        min: range?.min ? toLocalInput(range.min) : undefined,
-        max: range?.max ? toLocalInput(range.max) : undefined,
+        min: toLocalInput(new Date()),
         onChange: (event) => event.target.value && onChange(new Date(event.target.value).toISOString()),
         style: {
           font: 'inherit',

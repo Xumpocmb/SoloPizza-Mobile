@@ -10,20 +10,19 @@ import Icon from './ui/Icon';
 import useAppTheme from '../theme/useAppTheme';
 import { formatOrderDate } from '../screens/OrderHistoryScreen';
 
-export default function PreorderTimeField({ label, value, onChange, error, range, disabled }) {
+export default function PreorderTimeField({ label, value, onChange, error, disabled }) {
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
   const [draft, setDraft] = useState(null); // iPhone: время в колёсах до «Готово»
 
-  const start = () => (value ? new Date(value) : range?.min ?? new Date());
+  const start = () => (value ? new Date(value) : new Date());
 
   const open = () => {
     if (Platform.OS === 'android') {
       DateTimePickerAndroid.open({
         value: start(),
         mode: 'date',
-        minimumDate: range?.min,
-        maximumDate: range?.max,
+        minimumDate: new Date(), // прошедшие дни не выбрать
         onChange: (event, date) => {
           if (event.type !== 'set' || !date) return;
           DateTimePickerAndroid.open({
@@ -69,8 +68,7 @@ export default function PreorderTimeField({ label, value, onChange, error, range
                 display="spinner"
                 locale="ru-RU"
                 minuteInterval={5}
-                minimumDate={range?.min}
-                maximumDate={range?.max}
+                minimumDate={new Date()}
                 onChange={(event, date) => date && setDraft(date)}
               />
             )}
