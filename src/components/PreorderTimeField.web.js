@@ -25,7 +25,8 @@ export default function PreorderTimeField({ label, value, onChange, error, disab
         min: toLocalInput(new Date()),
         onChange: (event) => event.target.value && onChange(new Date(event.target.value).toISOString()),
         style: {
-          font: 'inherit',
+          // шрифт как у остального приложения в браузере (у поля даты свой, с засечками)
+          fontFamily: 'system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
           fontSize: 16,
           padding: '12px 14px',
           borderRadius: 12,
