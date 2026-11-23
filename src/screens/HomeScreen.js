@@ -623,6 +623,7 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingVertical: 4, // место под тень карточек сверху и снизу
   },
   productCard: {
+    flex: 1, // во всю высоту ленты, как самая высокая карточка
     backgroundColor: colors.cardBg,
     borderRadius: 20,
     marginRight: 15,
@@ -641,7 +642,9 @@ const makeStyles = (colors) => StyleSheet.create({
     marginTop: 10,
     borderRadius: 14,
   },
+  // карточки в ряду одной высоты: блок текста растягивается, цена с корзинкой прижата к низу
   productInfo: {
+    flex: 1,
     padding: 12,
   },
   productName: {
@@ -658,6 +661,7 @@ const makeStyles = (colors) => StyleSheet.create({
     lineHeight: 16,
   },
   productFooter: {
+    marginTop: 'auto',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

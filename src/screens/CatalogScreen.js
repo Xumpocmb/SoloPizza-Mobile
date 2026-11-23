@@ -343,7 +343,9 @@ const makeStyles = (colors) => StyleSheet.create({
     marginTop: 10,
     borderRadius: 14,
   },
+  // карточки в ряду одной высоты: блок текста растягивается, цена с корзинкой прижата к низу
   productInfo: {
+    flex: 1,
     padding: 12,
   },
   productName: {
@@ -360,6 +362,7 @@ const makeStyles = (colors) => StyleSheet.create({
     lineHeight: 16,
   },
   productFooter: {
+    marginTop: 'auto',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
