@@ -114,3 +114,20 @@ test('контакты: только выбранный филиал, а есл�
   expect(branchesToShow(branches, null)).toHaveLength(2);
   expect(branchesToShow(undefined, 1)).toEqual([]);
 });
+
+test('предзаказ: подпись выбранного времени из слотов сервера', () => {
+  const { preorderLabel } = require('../src/screens/CheckoutScreen');
+  const days = [
+    { date: '2026-11-23', label: 'Сегодня', times: [{ value: '2026-11-23T16:15:00+03:00', label: '16:15' }] },
+    { date: '2026-11-24', label: 'Завтра', times: [{ value: '2026-11-24T11:00:00+03:00', label: '11:00' }] },
+  ];
+  expect(preorderLabel(days, '2026-11-24T11:00:00+03:00')).toBe('Завтра, 11:00');
+  expect(preorderLabel(days, null)).toBeNull();
+  expect(preorderLabel(days, '2026-11-23T03:00:00+03:00')).toBeNull(); // времени уже нет в списке
+});
+
+test('время заказа показывается по Минску, а не по часовому поясу телефона', () => {
+  const { formatOrderDate } = require('../src/screens/OrderHistoryScreen');
+  expect(formatOrderDate('2026-11-24T11:00:00+03:00')).toMatch(/24 ноября.*11:00/);
+  expect(formatOrderDate('2026-11-24T08:00:00Z')).toMatch(/11:00/);
+});
