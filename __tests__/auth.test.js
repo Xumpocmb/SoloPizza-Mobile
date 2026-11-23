@@ -183,6 +183,7 @@ describe('вход через Apple', () => {
     await AsyncStorage.setItem('cart_token', 'guest-cart');
     AppleAuthentication.signInAsync.mockResolvedValue({
       identityToken: 'apple-token',
+      authorizationCode: 'apple-code',
       fullName: { givenName: 'Анна', familyName: 'Петрова' },
     });
 
@@ -191,7 +192,7 @@ describe('вход через Apple', () => {
     expect(calls).toEqual([{
       path: '/auth/apple/',
       headers: expect.objectContaining({ 'X-Cart-Token': 'guest-cart' }),
-      body: { identity_token: 'apple-token', first_name: 'Анна', last_name: 'Петрова' },
+      body: { identity_token: 'apple-token', authorization_code: 'apple-code', first_name: 'Анна', last_name: 'Петрова' },
     }]);
     expect(user).toEqual({ id: 5, first_name: 'Анна' });
     expect(await apiService.getAuthToken()).toBe('jwt-a');
