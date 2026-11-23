@@ -45,6 +45,8 @@ class AuthService {
     }
     return this.socialLogin(API_ENDPOINTS.AUTH.APPLE, {
       identity_token: credential.identityToken,
+      // одноразовый код: сервер меняет его на токен Apple, чтобы отозвать вход при удалении аккаунта
+      authorization_code: credential.authorizationCode || '',
       first_name: credential.fullName?.givenName || '',
       last_name: credential.fullName?.familyName || '',
     });
