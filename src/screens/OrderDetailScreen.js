@@ -99,6 +99,11 @@ export default function OrderDetailScreen({ route, navigation }) {
           {DELIVERY_LABELS[order.delivery_type] ?? order.delivery_type} · {PAYMENT_LABELS[order.payment_method] ?? order.payment_method}
         </Text>
         {!!order.address && <Text style={styles.text}>{order.address}</Text>}
+        {/* предзаказ, как в чеке сайта: «Готов к» всегда, «Доставка к» — только у доставки */}
+        {!!order.ready_by && <Text style={styles.text}>Готов к: {formatOrderDate(order.ready_by)}</Text>}
+        {!!order.delivery_by && order.delivery_type === 'delivery' && (
+          <Text style={styles.text}>Доставка к: {formatOrderDate(order.delivery_by)}</Text>
+        )}
         <Text style={styles.muted}>
           {order.customer_name}
           {order.phone ? ` · ${order.phone}` : ''}
