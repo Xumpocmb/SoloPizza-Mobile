@@ -140,7 +140,7 @@ export default function OrderDetailScreen({ route, navigation }) {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Contacts')}>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Contacts', { branchId: order.branch_id })}>
         <Text style={styles.buttonText}>Связаться с филиалом</Text>
       </TouchableOpacity>
     </ScrollView>

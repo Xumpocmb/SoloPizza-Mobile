@@ -106,3 +106,11 @@ test('каталог: разделы по категориям в порядке
   ]);
   expect(headerIndex).toEqual({ 1: 0, 2: 3 }); // у пустой категории заголовка нет
 });
+
+test('контакты: только выбранный филиал, а если его нет в списке — все', () => {
+  const { branchesToShow } = require('../src/screens/ContactsScreen');
+  const branches = [{ id: 1, name: 'Ленина' }, { id: 2, name: 'Тексер' }];
+  expect(branchesToShow(branches, 2).map((b) => b.name)).toEqual(['Тексер']);
+  expect(branchesToShow(branches, null)).toHaveLength(2);
+  expect(branchesToShow(undefined, 1)).toEqual([]);
+});

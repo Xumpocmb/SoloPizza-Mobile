@@ -16,13 +16,22 @@ import {
 import Icon from '../components/ui/Icon';
 import useAppTheme from '../theme/useAppTheme';
 import { catalogService } from '../services';
+import { useSelector } from 'react-redux';
 
-export default function ContactsScreen() {
+export const branchesToShow = (branches = [], branchId) => {
+  const selected = branches.filter((branch) => branch.id === branchId);
+  return selected.length ? selected : branches;
+};
+
+export default function ContactsScreen({ route }) {
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
   const [contacts, setContacts] = useState(null);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // из заказа — филиал заказа, иначе выбранный вверху; не нашли — показываем все
+  const selectedBranchId = useSelector((state) => state.products.branchId);
+  const branchId = route?.params?.branchId ?? selectedBranchId;
 
   const load = useCallback(async (force = false) => {
     try {
@@ -71,7 +80,7 @@ export default function ContactsScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      {(contacts.branches ?? []).map((branch) => (
+      {branchesToShow(contacts.branches, branchId).map((branch) => (
         <View key={branch.id} style={styles.card}>
           <Text style={styles.branchName}>{branch.name}</Text>
           <View style={styles.line}>
