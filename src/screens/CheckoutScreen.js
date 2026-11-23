@@ -21,7 +21,6 @@ import { useDispatch } from 'react-redux';
 import Alert from '../utils/alertShim';
 import useAppTheme from '../theme/useAppTheme';
 import PreorderTimeField from '../components/PreorderTimeField';
-import { preorderHours, preorderProblem, preorderRange } from '../utils/preorder';
 import { apiService, orderService } from '../services';
 import { newClientOrderId } from '../services/orderService';
 import { loadCart } from '../store/slices/cartSlice';
@@ -92,14 +91,6 @@ export default function CheckoutScreen({ navigation }) {
     if (!form.phone.trim()) local.phone = 'Укажите телефон';
     if (deliveryType === 'delivery' && !form.address.trim()) local.address = 'Укажите адрес доставки';
     if (!consent) local.consent = 'Нужно согласие на обработку персональных данных';
-    if (preorderOn) {
-      const keys = deliveryType === 'delivery' ? ['ready_by', 'delivery_by'] : ['ready_by'];
-      keys.forEach((key) => {
-        const problem = preorder[key] && preorderProblem(options?.preorder_days, preorder[key]);
-        if (problem) local[key] = problem;
-      });
-      if (!keys.some((key) => preorder[key])) local.ready_by = 'Выберите дату и время или выключите предзаказ';
-    }
     if (Object.keys(local).length > 0) {
       setErrors(local);
       return;
@@ -116,7 +107,7 @@ export default function CheckoutScreen({ navigation }) {
         comment: form.comment.trim(),
         consent: true,
         ready_by: preorderOn ? preorder.ready_by : null,
-        delivery_by: preorderOn && deliveryType === 'delivery' ? preorder.delivery_by : null,
+        delivery_by: preorderOn ? preorder.delivery_by : null,
       });
       clientOrderId.current = newClientOrderId();
       dispatch(loadCart()); // сервер очистил корзину после заказа
@@ -189,12 +180,9 @@ export default function CheckoutScreen({ navigation }) {
     </View>
   );
 
-  const preorderDays = options?.preorder_days ?? [];
-
   const setPreorderTime = (key, iso) => {
     setPreorder((prev) => ({ ...prev, [key]: iso }));
-    // сразу говорим, если филиал в это время заказы не принимает
-    setErrors((prev) => ({ ...prev, [key]: preorderProblem(preorderDays, iso) }));
+    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: null }));
   };
 
   const preorderField = (key, label) => (
@@ -203,7 +191,6 @@ export default function CheckoutScreen({ navigation }) {
       value={preorder[key]}
       onChange={(iso) => setPreorderTime(key, iso)}
       error={errors[key]}
-      range={preorderRange(preorderDays)}
       disabled={sending}
     />
   );
@@ -228,28 +215,24 @@ export default function CheckoutScreen({ navigation }) {
         <Text style={styles.section}>Оплата при получении</Text>
         {options && chips(options.payment_methods, paymentMethod, setPaymentMethod)}
 
-        {preorderDays.length > 0 && (
-          <>
-            <View style={styles.switchRow}>
-              <Text style={[styles.section, styles.switchTitle]}>Предзаказ</Text>
-              <Switch
-                value={preorderOn}
-                onValueChange={(on) => {
-                  setPreorderOn(on);
-                  if (!on) setErrors((prev) => ({ ...prev, ready_by: null, delivery_by: null }));
-                }}
-                trackColor={{ true: colors.accent, false: colors.divider }}
-                thumbColor="#ffffff"
-                accessibilityLabel="Предзаказ ко времени"
-              />
-            </View>
-            <Text style={styles.hint}>
-              {preorderOn ? `Принимаем: ${preorderHours(preorderDays)}` : 'Выключен — приготовим как можно скорее'}
-            </Text>
-            {preorderOn && preorderField('ready_by', 'Готов к')}
-            {preorderOn && deliveryType === 'delivery' && preorderField('delivery_by', 'Доставка к')}
-          </>
-        )}
+        {/* как блок «ПРЕДЗАКАЗ» на сайте: оба поля можно не заполнять */}
+        <View style={styles.switchRow}>
+          <Text style={[styles.section, styles.switchTitle]}>Предзаказ</Text>
+          <Switch
+            value={preorderOn}
+            onValueChange={setPreorderOn}
+            trackColor={{ true: colors.accent, false: colors.divider }}
+            thumbColor="#ffffff"
+            accessibilityLabel="Предзаказ ко времени"
+          />
+        </View>
+        <Text style={styles.hint}>
+          {preorderOn
+            ? 'Можно заполнить одно поле. Если указать только «Готов к», доставка — через 20 минут.'
+            : 'Выключен — приготовим как можно скорее'}
+        </Text>
+        {preorderOn && preorderField('ready_by', 'Готов к')}
+        {preorderOn && preorderField('delivery_by', 'Доставка к')}
 
         {field('comment', 'Комментарий', { placeholder: 'Пожелания к заказу', multiline: true, maxLength: 1000 })}
 
