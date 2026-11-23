@@ -115,15 +115,20 @@ test('контакты: только выбранный филиал, а есл�
   expect(branchesToShow(undefined, 1)).toEqual([]);
 });
 
-test('предзаказ: подпись выбранного времени из слотов сервера', () => {
-  const { preorderLabel } = require('../src/screens/CheckoutScreen');
+test('предзаказ: время из календаря проверяется по часам приёма филиала', () => {
+  const { preorderProblem, preorderHours, preorderRange } = require('../src/utils/preorder');
+  const t = (d, hm) => ({ value: `2026-11-${d}T${hm}:00+03:00`, label: hm });
   const days = [
-    { date: '2026-11-23', label: 'Сегодня', times: [{ value: '2026-11-23T16:15:00+03:00', label: '16:15' }] },
-    { date: '2026-11-24', label: 'Завтра', times: [{ value: '2026-11-24T11:00:00+03:00', label: '11:00' }] },
+    { date: '2026-11-23', label: 'Сегодня', times: [t(23, '16:15'), t(23, '21:30')] },
+    { date: '2026-11-24', label: 'Завтра', times: [t(24, '11:00'), t(24, '21:30')] },
   ];
-  expect(preorderLabel(days, '2026-11-24T11:00:00+03:00')).toBe('Завтра, 11:00');
-  expect(preorderLabel(days, null)).toBeNull();
-  expect(preorderLabel(days, '2026-11-23T03:00:00+03:00')).toBeNull(); // времени уже нет в списке
+  expect(preorderProblem(days, '2026-11-24T14:07:00+03:00')).toBeNull(); // любая минута внутри часов
+  expect(preorderProblem(days, '2026-11-24T08:07:00Z')).toBeNull(); // то же время в UTC
+  expect(preorderProblem(days, '2026-11-24T22:00:00+03:00')).toBe('Завтра предзаказ можно с 11:00 до 21:30.');
+  expect(preorderProblem(days, '2026-11-26T12:00:00+03:00')).toMatch(/недоступен/);
+  expect(preorderHours(days)).toBe('Сегодня: 16:15–21:30 · Завтра: 11:00–21:30');
+  expect(preorderRange(days).max.toISOString()).toBe('2026-11-24T18:30:00.000Z');
+  expect(preorderRange([])).toBeNull();
 });
 
 test('время заказа показывается по Минску, а не по часовому поясу телефона', () => {
