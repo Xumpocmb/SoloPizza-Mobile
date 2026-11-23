@@ -11,8 +11,15 @@ import { DELIVERY_LABELS } from '../services/orderService';
 import { num } from '../utils/money';
 import { apiErrorMessage } from '../utils/apiError';
 
+// время заказа — по часам пиццерии (Минск), а не по часовому поясу телефона
 export const formatOrderDate = (iso) =>
-  new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  new Date(iso).toLocaleString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Minsk',
+  });
 
 export default function OrderHistoryScreen({ navigation }) {
   const { colors } = useAppTheme();
