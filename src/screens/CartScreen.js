@@ -8,7 +8,6 @@ import {
   RefreshControl,
   ActivityIndicator,
   TextInput,
-  Platform,
 } from 'react-native';
 import Alert from '../utils/alertShim';
 import useAppTheme from '../theme/useAppTheme';
@@ -302,11 +301,8 @@ const CartScreen = ({ navigation }) => {
   }, []);
 
   return (
-    <View style={styles.container}>
-      {/* Заголовок */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Корзина</Text>
-      </View>
+    // edges top: без зелёной шапки контент не должен уходить под строку состояния
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* филиал закреплён сверху, как на главной и в каталоге: цены и наличие зависят от него */}
       <BranchPicker />
 
@@ -360,7 +356,7 @@ const CartScreen = ({ navigation }) => {
           </View>
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -368,25 +364,6 @@ const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
-  },
-  header: {
-    backgroundColor: colors.accent,
-    paddingTop: Platform.OS === 'web' ? 12 : 50,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.buttonText,
-    textAlign: 'center',
   },
   cartList: {
     paddingBottom: 24,
