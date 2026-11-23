@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // ИСПРАВЛЕНО ПРИ АУДИТЕ: прямой импорт react-native-vector-icons в v10.x
 // не тянет шрифт — иконки рендерились пустыми квадратами.
 import Icon from '../components/ui/Icon';
+import BranchPicker from '../components/BranchPicker';
 import { cartItemOptions } from '../utils/productOptions';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -306,6 +307,8 @@ const CartScreen = ({ navigation }) => {
       <View style={styles.header}>
         <Text style={styles.title}>Корзина</Text>
       </View>
+      {/* филиал закреплён сверху, как на главной и в каталоге: цены и наличие зависят от него */}
+      <BranchPicker />
 
       {items.length === 0 ? (
         renderEmptyCart()
