@@ -37,7 +37,7 @@ export default function ProductImage({ uri, glyph, style, emojiSize = 40, resize
   if (uri && backdrop) {
     return (
       <View style={[style, { overflow: 'hidden' }]}>
-        <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={25} {...webLazyProps(Platform.OS)} />
+        <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={5} {...webLazyProps(Platform.OS)} />
         <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="contain" {...webLazyProps(Platform.OS)} />
       </View>
     );
