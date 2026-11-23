@@ -9,7 +9,7 @@
  */
 
 import React from 'react';
-import { Platform, View, Text, Image } from 'react-native';
+import { Platform, StyleSheet, View, Text, Image } from 'react-native';
 import useAppTheme from '../../theme/useAppTheme';
 
 export const CATEGORY_GLYPHS = {
@@ -30,8 +30,18 @@ export const CATEGORY_GLYPHS = {
 export const webLazyProps = (os) =>
   os === 'web' ? { loading: 'lazy', decoding: 'async' } : {};
 
-export default function ProductImage({ uri, glyph, style, emojiSize = 40, resizeMode = 'cover' }) {
+export default function ProductImage({ uri, glyph, style, emojiSize = 40, resizeMode = 'cover', backdrop = false }) {
   const { colors } = useAppTheme();
+
+  // backdrop: фото целиком, а пустые поля у не квадратного фото закрывает оно же, увеличенное и размытое
+  if (uri && backdrop) {
+    return (
+      <View style={[style, { overflow: 'hidden' }]}>
+        <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={5} {...webLazyProps(Platform.OS)} />
+        <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="contain" {...webLazyProps(Platform.OS)} />
+      </View>
+    );
+  }
 
   if (uri) {
     // 02.11.2026: каталог тянул 22 MB картинок разом (92 запроса, 34 c до

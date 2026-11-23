@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { num } from '../utils/money';
+import { compactDescription } from './ProductDetailScreen';
 import ProductImage from '../components/ui/ProductImage';
 import Icon from '../components/ui/Icon';
 import { useDispatch, useSelector } from 'react-redux';
@@ -133,7 +134,7 @@ const CatalogScreen = ({ navigation, route }) => {
       style={styles.productCard}
       onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
     >
-      <ProductImage uri={item.image || item.main_image || item.images?.[0]?.image} style={styles.productImage} />
+      <ProductImage uri={item.image || item.main_image || item.images?.[0]?.image} style={styles.productImage} backdrop />
       {(item.is_popular || item.isPopular) && (
         <View style={styles.popularBadge}>
           <Text style={styles.popularText}>Популярное</Text>
@@ -141,8 +142,8 @@ const CatalogScreen = ({ navigation, route }) => {
       )}
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
-        <Text style={styles.productDescription} numberOfLines={2}>
-          {item.description || item.short_description || 'Описание товара'}
+        <Text style={styles.productDescription}>
+          {compactDescription(item.description || item.short_description || 'Описание товара')}
         </Text>
         <View style={styles.productFooter}>
           <Text style={styles.productPrice}>{num(item.price ?? item.base_price).toFixed(2)} BYN</Text>
@@ -343,13 +344,15 @@ const makeStyles = (colors) => StyleSheet.create({
     marginTop: 10,
     borderRadius: 14,
   },
+  // карточки в ряду одной высоты: блок текста растягивается, цена с корзинкой прижата к низу
   productInfo: {
+    flex: 1,
     padding: 12,
   },
   productName: {
     fontSize: 16,
     fontWeight: '600',
-    textAlign: 'center',
+    textAlign: 'left',
     color: colors.text,
     marginBottom: 4,
   },
@@ -360,6 +363,7 @@ const makeStyles = (colors) => StyleSheet.create({
     lineHeight: 16,
   },
   productFooter: {
+    marginTop: 'auto',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
