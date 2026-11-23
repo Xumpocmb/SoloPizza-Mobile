@@ -8,7 +8,6 @@ import {
   RefreshControl,
   ActivityIndicator,
   TextInput,
-  Platform,
 } from 'react-native';
 import Alert from '../utils/alertShim';
 import useAppTheme from '../theme/useAppTheme';
@@ -18,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // ИСПРАВЛЕНО ПРИ АУДИТЕ: прямой импорт react-native-vector-icons в v10.x
 // не тянет шрифт — иконки рендерились пустыми квадратами.
 import Icon from '../components/ui/Icon';
+import BranchPicker from '../components/BranchPicker';
 import { cartItemOptions } from '../utils/productOptions';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -301,11 +301,10 @@ const CartScreen = ({ navigation }) => {
   }, []);
 
   return (
-    <View style={styles.container}>
-      {/* Заголовок */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Корзина</Text>
-      </View>
+    // edges top: без зелёной шапки контент не должен уходить под строку состояния
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* филиал закреплён сверху, как на главной и в каталоге: цены и наличие зависят от него */}
+      <BranchPicker />
 
       {items.length === 0 ? (
         renderEmptyCart()
@@ -357,7 +356,7 @@ const CartScreen = ({ navigation }) => {
           </View>
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -365,25 +364,6 @@ const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
-  },
-  header: {
-    backgroundColor: colors.accent,
-    paddingTop: Platform.OS === 'web' ? 12 : 50,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.buttonText,
-    textAlign: 'center',
   },
   cartList: {
     paddingBottom: 24,

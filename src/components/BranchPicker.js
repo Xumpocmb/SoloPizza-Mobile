@@ -3,7 +3,7 @@
  * филиала (branch_id в каждом запросе), поэтому при смене корзина очищается —
  * с подтверждением, если в ней что-то есть.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import Alert from '../utils/alertShim';
@@ -19,6 +19,9 @@ export default function BranchPicker() {
   const branchId = useSelector((state) => state.products.branchId);
   const cartCount = useSelector((state) => state.cart.itemsCount);
   const [open, setOpen] = useState(false);
+  const [cleared, setCleared] = useState(false); // плашка «Ваша корзина очищена»
+  const clearedTimer = useRef(null);
+  useEffect(() => () => clearTimeout(clearedTimer.current), []);
 
   useEffect(() => {
     dispatch(fetchBranches());
@@ -31,7 +34,16 @@ export default function BranchPicker() {
   const choose = (branch) => {
     setOpen(false);
     if (branch.id === branchId) return;
-    const apply = () => dispatch(selectBranch(branch.id));
+    const apply = async () => {
+      const hadItems = cartCount > 0;
+      const result = await dispatch(selectBranch(branch.id));
+      // сервер очищает корзину при смене филиала — говорим об этом
+      if (hadItems && selectBranch.fulfilled.match(result)) {
+        setCleared(true);
+        clearTimeout(clearedTimer.current);
+        clearedTimer.current = setTimeout(() => setCleared(false), 2500);
+      }
+    };
     if (cartCount > 0) {
       Alert.alert(
         'Сменить филиал?',
@@ -47,7 +59,7 @@ export default function BranchPicker() {
   };
 
   return (
-    <>
+    <View style={styles.wrap}>
       <TouchableOpacity
         style={styles.row}
         onPress={() => setOpen(true)}
@@ -86,12 +98,44 @@ export default function BranchPicker() {
           </Pressable>
         </Pressable>
       </Modal>
-    </>
+
+      {cleared && (
+        <View style={styles.toast} accessibilityLiveRegion="polite">
+          <Icon name="check-circle" size={20} color={colors.accent} />
+          <Text style={styles.toastText}>Ваша корзина очищена</Text>
+        </View>
+      )}
+    </View>
   );
 }
 
 const makeStyles = (colors) =>
   StyleSheet.create({
+    // поверх содержимого экрана: плашка не сдвигает список
+    wrap: {
+      zIndex: 20,
+      elevation: 20,
+    },
+    toast: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      top: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderRadius: 14,
+      backgroundColor: colors.headerBg,
+      borderWidth: 1,
+      borderColor: colors.accent,
+    },
+    toastText: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.text,
+    },
     row: {
       flexDirection: 'row',
       alignItems: 'center',

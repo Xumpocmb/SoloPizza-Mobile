@@ -11,6 +11,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -19,6 +20,7 @@ import {
 import { useDispatch } from 'react-redux';
 import Alert from '../utils/alertShim';
 import useAppTheme from '../theme/useAppTheme';
+import PreorderTimeField from '../components/PreorderTimeField';
 import { apiService, orderService } from '../services';
 import { newClientOrderId } from '../services/orderService';
 import { loadCart } from '../store/slices/cartSlice';
@@ -42,6 +44,9 @@ export default function CheckoutScreen({ navigation }) {
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState({});
   const [sending, setSending] = useState(false);
+  // предзаказ, как на сайте: «Готов к» / «Доставка к» (ISO); выключен — «как можно скорее»
+  const [preorderOn, setPreorderOn] = useState(false);
+  const [preorder, setPreorder] = useState({ ready_by: null, delivery_by: null });
   // один id на попытку оформления: повтор после обрыва сети вернёт тот же заказ
   const clientOrderId = useRef(newClientOrderId());
 
@@ -101,13 +106,15 @@ export default function CheckoutScreen({ navigation }) {
         address: deliveryType === 'delivery' ? form.address.trim() : '',
         comment: form.comment.trim(),
         consent: true,
+        ready_by: preorderOn ? preorder.ready_by : null,
+        delivery_by: preorderOn ? preorder.delivery_by : null,
       });
       clientOrderId.current = newClientOrderId();
       dispatch(loadCart()); // сервер очистил корзину после заказа
       navigation.replace('OrderDetail', { orderId: order.id, justCreated: true });
     } catch (error) {
       const fields = apiFieldErrors(error);
-      const formFields = fields && Object.keys(fields).filter((key) => key in form || key === 'consent');
+      const formFields = fields && Object.keys(fields).filter((key) => key in form || key in preorder || key === 'consent');
       if (formFields?.length) {
         setErrors(fields);
       } else {
@@ -173,6 +180,21 @@ export default function CheckoutScreen({ navigation }) {
     </View>
   );
 
+  const setPreorderTime = (key, iso) => {
+    setPreorder((prev) => ({ ...prev, [key]: iso }));
+    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: null }));
+  };
+
+  const preorderField = (key, label) => (
+    <PreorderTimeField
+      label={label}
+      value={preorder[key]}
+      onChange={(iso) => setPreorderTime(key, iso)}
+      error={errors[key]}
+      disabled={sending}
+    />
+  );
+
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -192,6 +214,25 @@ export default function CheckoutScreen({ navigation }) {
 
         <Text style={styles.section}>Оплата при получении</Text>
         {options && chips(options.payment_methods, paymentMethod, setPaymentMethod)}
+
+        {/* как блок «ПРЕДЗАКАЗ» на сайте: оба поля можно не заполнять */}
+        <View style={styles.switchRow}>
+          <Text style={[styles.section, styles.switchTitle]}>Предзаказ</Text>
+          <Switch
+            value={preorderOn}
+            onValueChange={setPreorderOn}
+            trackColor={{ true: colors.accent, false: colors.divider }}
+            thumbColor="#ffffff"
+            accessibilityLabel="Предзаказ ко времени"
+          />
+        </View>
+        <Text style={styles.hint}>
+          {preorderOn
+            ? 'Можно заполнить одно поле. Если указать только «Готов к», доставка — через 20 минут.'
+            : 'Выключен — приготовим как можно скорее'}
+        </Text>
+        {preorderOn && preorderField('ready_by', 'Готов к')}
+        {preorderOn && preorderField('delivery_by', 'Доставка к')}
 
         {field('comment', 'Комментарий', { placeholder: 'Пожелания к заказу', multiline: true, maxLength: 1000 })}
 
@@ -250,7 +291,7 @@ export default function CheckoutScreen({ navigation }) {
         {errors.consent ? <Text style={styles.error}>{errors.consent}</Text> : null}
 
         <Text style={styles.note}>
-          После оформления заказа с Вами свяжется оператор для подтверждения заказа.{'\n\n'}
+          После оформления заказа с Вами свяжется администратор для подтверждения заказа.{'\n\n'}
           Если заказ не будет подтвержден, он будет отменен.{'\n\n'}
           В случае, если с Вами не связались в течение 15ти минут, пожалуйста, перезвоните нам по нашим номерам и
           сообщите Ваш номер заказа.
@@ -266,6 +307,7 @@ export default function CheckoutScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
     </KeyboardAvoidingView>
   );
 }
@@ -305,6 +347,9 @@ const makeStyles = (colors) =>
       fontSize: 16,
     },
     inputError: { borderColor: colors.error },
+    hint: { marginTop: 4, fontSize: 13, lineHeight: 18, color: colors.textMuted },
+    switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 18 },
+    switchTitle: { marginTop: 0, marginBottom: 0 },
     error: { marginTop: 4, fontSize: 12, color: colors.error },
     card: { padding: 14, borderRadius: 12, gap: 8, backgroundColor: colors.cardBg },
     row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },

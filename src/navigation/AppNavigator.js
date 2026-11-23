@@ -72,7 +72,8 @@ const stackScreenOptions = {
 const sharedScreens = (
   <>
     <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Вход' }} />
-    <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: 'Товар' }} />
+    {/* без заголовка: название товара и так крупно под фото */}
+    <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: '' }} />
     <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Оформление заказа' }} />
     <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} options={{ title: 'История заказов' }} />
     <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Детали заказа' }} />
@@ -145,6 +146,9 @@ export default function AppNavigator() {
           component={CartStack}
           options={{
             tabBarLabel: 'Корзина',
+            // ушли с вкладки — стек сбрасывается к корзине: иначе после заказа
+            // вкладка снова открывала экран прошлого заказа, а не корзину
+            popToTopOnBlur: true,
             tabBarIcon: ({ size }) => <CartIcon size={size} />,
           }}
         />

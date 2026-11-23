@@ -105,6 +105,7 @@ const HomeScreen = ({ navigation }) => {
 
   // Instagram и реквизиты компании (как в футере сайта) — из /contacts/
   const [contacts, setContacts] = useState(null);
+  const branchContacts = contacts?.branches?.find((b) => b.id === branchId) ?? null;
   useEffect(() => {
     catalogService.getContacts().then(setContacts).catch(() => setContacts(null));
   }, []);
@@ -160,7 +161,6 @@ const HomeScreen = ({ navigation }) => {
       <ProductImage 
         uri={item.image || item.main_image || item.images?.[0]?.image} 
         style={styles.productImage}
-        resizeMode="contain"
       />
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
@@ -223,13 +223,14 @@ const HomeScreen = ({ navigation }) => {
   return (
     // edges top: контент не уходит под строку состояния (Android рисует приложение во весь экран)
     <SafeAreaView style={styles.container} edges={['top']}>
-    <ScrollView 
+    {/* филиал закреплён сверху: при прокрутке остаётся на месте, как в каталоге */}
+    <BranchPicker />
+    <ScrollView
       style={styles.container}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <BranchPicker />
       {announcements.map((item) => (
         <View key={item.id} style={styles.announcement}>
           <Text style={styles.announcementText}>{item.text}</Text>
@@ -325,7 +326,6 @@ const HomeScreen = ({ navigation }) => {
             keyExtractor={(item) => String(item.id)}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.vacanciesList}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.vacancyCard}
@@ -353,6 +353,23 @@ const HomeScreen = ({ navigation }) => {
 
       {/* В самом конце — как футер сайта: Instagram, реквизиты, © */}
       <View style={styles.footer}>
+        {/* контакты выбранного вверху филиала; номера — звонок по нажатию */}
+        {!!branchContacts && (
+          <View style={styles.contacts}>
+            <Text style={styles.contactsTitle}>Контакты</Text>
+            {(branchContacts.phones ?? []).map((phone) => (
+              <TouchableOpacity
+                key={phone.dial}
+                onPress={() => Linking.openURL(`tel:${phone.dial}`)}
+                accessibilityRole="link"
+                accessibilityLabel={`Позвонить ${phone.number}`}
+              >
+                <Text style={styles.contactsPhone}>{phone.number}</Text>
+              </TouchableOpacity>
+            ))}
+            {!!branchContacts.address && <Text style={styles.contactsAddress}>{branchContacts.address}</Text>}
+          </View>
+        )}
         {!!contacts?.instagram_url && (
           <TouchableOpacity
             style={styles.instagram}
@@ -473,15 +490,38 @@ const makeStyles = (colors) => StyleSheet.create({
     marginBottom: 24,
     gap: 12,
   },
+  contacts: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  contactsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.accent,
+    marginBottom: 2,
+  },
+  contactsPhone: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.accent,
+  },
+  contactsAddress: {
+    fontSize: 14,
+    color: colors.text,
+  },
+  // по ширине содержимого и по центру, а не во всю строку
   instagram: {
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'center',
+    gap: 8,
     backgroundColor: colors.cardBg,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.divider,
-    padding: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   instagramText: {
     fontSize: 16,
@@ -495,6 +535,7 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     color: colors.textMuted,
+    textAlign: 'center',
   },
   reviewCard: {
     backgroundColor: colors.cardBg,
@@ -525,9 +566,6 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.buttonText,
     fontSize: 15,
     fontWeight: '700',
-  },
-  vacanciesList: {
-    paddingHorizontal: 16,
   },
   vacancyCard: {
     width: 200,
@@ -582,7 +620,7 @@ const makeStyles = (colors) => StyleSheet.create({
     fontWeight: '500',
   },
   productsList: {
-    paddingLeft: 5,
+    paddingVertical: 4, // место под тень карточек сверху и снизу
   },
   productCard: {
     backgroundColor: colors.cardBg,
@@ -595,11 +633,13 @@ const makeStyles = (colors) => StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
   },
+  // фото квадратные (1:1): квадрат со скруглением, чуть ниже верхнего края карточки
   productImage: {
-    width: '100%',
+    width: 120,
     height: 120,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
+    alignSelf: 'center',
+    marginTop: 10,
+    borderRadius: 14,
   },
   productInfo: {
     padding: 12,

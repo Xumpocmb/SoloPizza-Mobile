@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import Alert from '../utils/alertShim';
@@ -101,6 +102,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [addonsOpen, setAddonsOpen] = useState(false); // список добавок длинный — раскрывается по нажатию
   const [toast, setToast] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0); // «Повторить» после обрыва сети
@@ -117,7 +119,6 @@ const ProductDetailScreen = ({ route, navigation }) => {
         if (!active) return;
         setProduct(data);
         setSelection(initialSelection(data));
-        navigation.setOptions({ title: data.name }); // заголовок — название товара, а не «Товар»
       })
       .catch((error) => {
         if (!active) return;
@@ -204,7 +205,13 @@ const ProductDetailScreen = ({ route, navigation }) => {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <ProductImage uri={product.image} style={styles.productImage} emojiSize={72} resizeMode="contain" />
+        <View style={styles.imageBox}>
+          {/* фон — то же фото, растянутое и размытое: закрывает пустые поля по бокам */}
+          {!!product.image && (
+            <Image source={{ uri: product.image }} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={25} />
+          )}
+          <ProductImage uri={product.image} style={styles.productImage} emojiSize={72} resizeMode="contain" />
+        </View>
 
         <View style={styles.productInfo}>
           <Text style={styles.productName}>{product.name}</Text>
@@ -259,7 +266,18 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
         {addonsAvailable(product, variant) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Добавки</Text>
+            <TouchableOpacity
+              style={styles.addonsToggle}
+              onPress={() => setAddonsOpen(!addonsOpen)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: addonsOpen }}
+            >
+              <Text style={[styles.sectionTitle, styles.addonsToggleTitle]}>
+                Добавки{selection.addons.length ? ` · ${selection.addons.length}` : ''}
+              </Text>
+              <Icon name={addonsOpen ? 'expand-less' : 'expand-more'} size={26} color={colors.textMuted} />
+            </TouchableOpacity>
+            {addonsOpen && (
             <View style={styles.addonsContainer}>
               {variant.addons.map((addon) => {
                 const isSelected = selection.addons.some((a) => a.id === addon.id);
@@ -284,6 +302,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
                 );
               })}
             </View>
+            )}
           </View>
         )}
 
@@ -384,6 +403,9 @@ const makeStyles = (colors) => StyleSheet.create({
    },
   scrollView: {
     flex: 1,
+  },
+  imageBox: {
+    overflow: 'hidden',
   },
   productImage: {
     width: '100%',
@@ -519,7 +541,16 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.buttonText,
   },
   // сетка 2 в ряд
+  addonsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  addonsToggleTitle: {
+    marginBottom: 0,
+  },
   addonsContainer: {
+    marginTop: 10,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',

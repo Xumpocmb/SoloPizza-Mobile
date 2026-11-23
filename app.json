@@ -13,7 +13,9 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleDevelopmentRegion": "ru",
-        "CFBundleLocalizations": ["ru"]
+        "CFBundleLocalizations": [
+          "ru"
+        ]
       }
     },
     "android": {
@@ -32,7 +34,8 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.101927534807-s7ldodoqvid6qdvpcg5t78denkh8ua71"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {
