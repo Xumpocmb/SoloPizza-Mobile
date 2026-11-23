@@ -8,11 +8,10 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Linking,
-  Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -21,7 +20,8 @@ import {
 import { useDispatch } from 'react-redux';
 import Alert from '../utils/alertShim';
 import useAppTheme from '../theme/useAppTheme';
-import Icon from '../components/ui/Icon';
+import PreorderTimeField from '../components/PreorderTimeField';
+import { preorderHours, preorderProblem, preorderRange } from '../utils/preorder';
 import { apiService, orderService } from '../services';
 import { newClientOrderId } from '../services/orderService';
 import { loadCart } from '../store/slices/cartSlice';
@@ -30,15 +30,6 @@ import { num } from '../utils/money';
 import { apiErrorMessage, apiFieldErrors } from '../utils/apiError';
 
 const money = (value) => `${num(value).toFixed(2)} BYN`;
-
-/** «Сегодня, 16:15» для выбранного времени предзаказа; null — не выбрано или времени уже нет в списке. */
-export const preorderLabel = (days = [], value) => {
-  for (const day of days) {
-    const time = day.times.find((item) => item.value === value);
-    if (time) return `${day.label}, ${time.label}`;
-  }
-  return null;
-};
 
 export default function CheckoutScreen({ navigation }) {
   const { colors } = useAppTheme();
@@ -54,10 +45,9 @@ export default function CheckoutScreen({ navigation }) {
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState({});
   const [sending, setSending] = useState(false);
-  // предзаказ, как на сайте: «Готов к» / «Доставка к»; null — «как можно скорее»
+  // предзаказ, как на сайте: «Готов к» / «Доставка к» (ISO); выключен — «как можно скорее»
+  const [preorderOn, setPreorderOn] = useState(false);
   const [preorder, setPreorder] = useState({ ready_by: null, delivery_by: null });
-  const [picking, setPicking] = useState(null); // какое поле выбираем в окне
-  const [pickDay, setPickDay] = useState(null);
   // один id на попытку оформления: повтор после обрыва сети вернёт тот же заказ
   const clientOrderId = useRef(newClientOrderId());
 
@@ -102,6 +92,14 @@ export default function CheckoutScreen({ navigation }) {
     if (!form.phone.trim()) local.phone = 'Укажите телефон';
     if (deliveryType === 'delivery' && !form.address.trim()) local.address = 'Укажите адрес доставки';
     if (!consent) local.consent = 'Нужно согласие на обработку персональных данных';
+    if (preorderOn) {
+      const keys = deliveryType === 'delivery' ? ['ready_by', 'delivery_by'] : ['ready_by'];
+      keys.forEach((key) => {
+        const problem = preorder[key] && preorderProblem(options?.preorder_days, preorder[key]);
+        if (problem) local[key] = problem;
+      });
+      if (!keys.some((key) => preorder[key])) local.ready_by = 'Выберите дату и время или выключите предзаказ';
+    }
     if (Object.keys(local).length > 0) {
       setErrors(local);
       return;
@@ -117,8 +115,8 @@ export default function CheckoutScreen({ navigation }) {
         address: deliveryType === 'delivery' ? form.address.trim() : '',
         comment: form.comment.trim(),
         consent: true,
-        ready_by: preorder.ready_by,
-        delivery_by: deliveryType === 'delivery' ? preorder.delivery_by : null,
+        ready_by: preorderOn ? preorder.ready_by : null,
+        delivery_by: preorderOn && deliveryType === 'delivery' ? preorder.delivery_by : null,
       });
       clientOrderId.current = newClientOrderId();
       dispatch(loadCart()); // сервер очистил корзину после заказа
@@ -193,38 +191,22 @@ export default function CheckoutScreen({ navigation }) {
 
   const preorderDays = options?.preorder_days ?? [];
 
-  const openPicker = (key) => {
-    const current = preorderDays.find((day) => day.times.some((item) => item.value === preorder[key]));
-    setPickDay((current ?? preorderDays[0])?.date ?? null);
-    setPicking(key);
+  const setPreorderTime = (key, iso) => {
+    setPreorder((prev) => ({ ...prev, [key]: iso }));
+    // сразу говорим, если филиал в это время заказы не принимает
+    setErrors((prev) => ({ ...prev, [key]: preorderProblem(preorderDays, iso) }));
   };
 
-  const pick = (value) => {
-    setPreorder((prev) => ({ ...prev, [picking]: value }));
-    if (errors[picking]) setErrors((prev) => ({ ...prev, [picking]: null }));
-    setPicking(null);
-  };
-
-  const preorderRow = (key, label) => (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <TouchableOpacity
-        style={[styles.input, styles.pickerRow, errors[key] && styles.inputError]}
-        onPress={() => openPicker(key)}
-        disabled={sending}
-        accessibilityRole="button"
-        accessibilityLabel={`${label}: ${preorderLabel(preorderDays, preorder[key]) ?? 'как можно скорее'}`}
-      >
-        <Text style={preorder[key] ? styles.pickerValue : styles.pickerPlaceholder}>
-          {preorderLabel(preorderDays, preorder[key]) ?? 'Как можно скорее'}
-        </Text>
-        <Icon name="schedule" size={20} color={colors.textMuted} />
-      </TouchableOpacity>
-      {errors[key] ? <Text style={styles.error}>{errors[key]}</Text> : null}
-    </View>
+  const preorderField = (key, label) => (
+    <PreorderTimeField
+      label={label}
+      value={preorder[key]}
+      onChange={(iso) => setPreorderTime(key, iso)}
+      error={errors[key]}
+      range={preorderRange(preorderDays)}
+      disabled={sending}
+    />
   );
-
-  const pickDayTimes = preorderDays.find((day) => day.date === pickDay)?.times ?? [];
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -248,10 +230,24 @@ export default function CheckoutScreen({ navigation }) {
 
         {preorderDays.length > 0 && (
           <>
-            <Text style={styles.section}>Предзаказ</Text>
-            <Text style={styles.hint}>Можно не заполнять — приготовим как можно скорее</Text>
-            {preorderRow('ready_by', 'Готов к')}
-            {deliveryType === 'delivery' && preorderRow('delivery_by', 'Доставка к')}
+            <View style={styles.switchRow}>
+              <Text style={[styles.section, styles.switchTitle]}>Предзаказ</Text>
+              <Switch
+                value={preorderOn}
+                onValueChange={(on) => {
+                  setPreorderOn(on);
+                  if (!on) setErrors((prev) => ({ ...prev, ready_by: null, delivery_by: null }));
+                }}
+                trackColor={{ true: colors.accent, false: colors.divider }}
+                thumbColor="#ffffff"
+                accessibilityLabel="Предзаказ ко времени"
+              />
+            </View>
+            <Text style={styles.hint}>
+              {preorderOn ? `Принимаем: ${preorderHours(preorderDays)}` : 'Выключен — приготовим как можно скорее'}
+            </Text>
+            {preorderOn && preorderField('ready_by', 'Готов к')}
+            {preorderOn && deliveryType === 'delivery' && preorderField('delivery_by', 'Доставка к')}
           </>
         )}
 
@@ -329,33 +325,6 @@ export default function CheckoutScreen({ navigation }) {
         </TouchableOpacity>
       </ScrollView>
 
-      <Modal visible={!!picking} transparent animationType="fade" onRequestClose={() => setPicking(null)}>
-        <Pressable style={styles.backdrop} onPress={() => setPicking(null)}>
-          <Pressable style={styles.sheet}>
-            <Text style={styles.sheetTitle}>{picking === 'delivery_by' ? 'Доставка к' : 'Готов к'}</Text>
-            {chips(preorderDays.map((day) => ({ id: day.date, name: day.label })), pickDay, setPickDay)}
-            <ScrollView style={styles.times} contentContainerStyle={styles.timesGrid}>
-              {pickDayTimes.map((item) => {
-                const active = preorder[picking] === item.value;
-                return (
-                  <TouchableOpacity
-                    key={item.value}
-                    style={[styles.time, active && styles.chipActive]}
-                    onPress={() => pick(item.value)}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: active }}
-                  >
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{item.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-            <TouchableOpacity style={styles.asap} onPress={() => pick(null)} accessibilityRole="button">
-              <Text style={styles.asapText}>Как можно скорее</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -395,26 +364,9 @@ const makeStyles = (colors) =>
       fontSize: 16,
     },
     inputError: { borderColor: colors.error },
-    hint: { marginTop: -4, fontSize: 13, color: colors.textMuted },
-    pickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    pickerValue: { fontSize: 16, color: colors.text },
-    pickerPlaceholder: { fontSize: 16, color: colors.textMuted },
-    backdrop: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-    sheet: { borderRadius: 16, padding: 16, gap: 12, backgroundColor: colors.cardBg },
-    sheetTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
-    times: { maxHeight: 260 },
-    timesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    time: {
-      width: '22%',
-      alignItems: 'center',
-      paddingVertical: 10,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.divider,
-      backgroundColor: colors.bg,
-    },
-    asap: { alignItems: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.divider },
-    asapText: { fontSize: 15, fontWeight: '600', color: colors.text },
+    hint: { marginTop: 4, fontSize: 13, lineHeight: 18, color: colors.textMuted },
+    switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 18 },
+    switchTitle: { marginTop: 0, marginBottom: 0 },
     error: { marginTop: 4, fontSize: 12, color: colors.error },
     card: { padding: 14, borderRadius: 12, gap: 8, backgroundColor: colors.cardBg },
     row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
