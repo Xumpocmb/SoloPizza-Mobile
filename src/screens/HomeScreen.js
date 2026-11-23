@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import Icon from '../components/ui/Icon';
 import OfflineNotice from '../components/ui/OfflineNotice';
+import { compactDescription } from './ProductDetailScreen';
 import ProductImage, { CATEGORY_GLYPHS } from '../components/ui/ProductImage';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchFeaturedProducts, fetchCategories } from '../store/slices/productSlice';
@@ -161,11 +162,12 @@ const HomeScreen = ({ navigation }) => {
       <ProductImage 
         uri={item.image || item.main_image || item.images?.[0]?.image} 
         style={styles.productImage}
+        backdrop
       />
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
-        <Text style={styles.productDescription} numberOfLines={2}>
-          {item.description || item.short_description}
+        <Text style={styles.productDescription}>
+          {compactDescription(item.description || item.short_description || '')}
         </Text>
         <View style={styles.productFooter}>
           <Text style={styles.productPrice}>
@@ -650,7 +652,7 @@ const makeStyles = (colors) => StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: 'bold',
-    textAlign: 'center',
+    textAlign: 'left',
     color: colors.text,
     marginBottom: 4,
   },
