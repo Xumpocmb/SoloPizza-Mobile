@@ -146,6 +146,9 @@ export default function AppNavigator() {
           component={CartStack}
           options={{
             tabBarLabel: 'Корзина',
+            // ушли с вкладки — стек сбрасывается к корзине: иначе после заказа
+            // вкладка снова открывала экран прошлого заказа, а не корзину
+            popToTopOnBlur: true,
             tabBarIcon: ({ size }) => <CartIcon size={size} />,
           }}
         />
