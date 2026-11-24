@@ -346,7 +346,7 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   // карточки в ряду одной высоты: блок текста растягивается, цена с корзинкой прижата к низу
   productInfo: {
-    flex: 1,
+    flexGrow: 1,
     padding: 12,
   },
   productName: {
