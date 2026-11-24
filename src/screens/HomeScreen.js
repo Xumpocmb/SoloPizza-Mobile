@@ -625,7 +625,8 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingVertical: 4, // место под тень карточек сверху и снизу
   },
   productCard: {
-    flexGrow: 1, // во всю высоту ленты, но не меньше содержимого (flex: 1 на iPhone обрезал низ карточки)
+    // без flex/flexGrow: в горизонтальной ленте они занижают высоту карточки (Yoga в RN) и низ обрезается;
+    // одинаковую высоту в ряду даёт растяжение ячейки по высоте ленты
     backgroundColor: colors.cardBg,
     borderRadius: 20,
     marginRight: 15,
