@@ -625,7 +625,7 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingVertical: 4, // место под тень карточек сверху и снизу
   },
   productCard: {
-    flex: 1, // во всю высоту ленты, как самая высокая карточка
+    flexGrow: 1, // во всю высоту ленты, но не меньше содержимого (flex: 1 на iPhone обрезал низ карточки)
     backgroundColor: colors.cardBg,
     borderRadius: 20,
     marginRight: 15,
@@ -646,7 +646,7 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   // карточки в ряду одной высоты: блок текста растягивается, цена с корзинкой прижата к низу
   productInfo: {
-    flex: 1,
+    flexGrow: 1,
     padding: 12,
   },
   productName: {
